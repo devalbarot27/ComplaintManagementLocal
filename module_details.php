@@ -3,6 +3,7 @@ session_start();
 include 'pdo_obconn.php';
 include 'includes/admin_access_helpers.php';
 include 'includes/module_helpers.php';
+require_once 'includes/record_details_layout.php';
 
 require_system_admin($obconn);
 
@@ -27,6 +28,9 @@ if (!$record) {
     <title>Module Details #<?php echo (int) $record['id']; ?></title>
     <?php include 'header_css.php'; ?>
     <link href="css/orderbook_style.css" rel="stylesheet" />
+    <link href="css/complaint_form.css" rel="stylesheet" />
+    <link href="css/complaint_details.css" rel="stylesheet" />
+    <link href="css/record_details.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </head>
@@ -36,29 +40,35 @@ if (!$record) {
         <?php include 'sidebar.php'; ?>
 
         <div class="content">
-            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                <div>
-                    <h5 class="mb-1">Module #<?php echo (int) $record['id']; ?></h5>
-                </div>
-                <div>
-                    <a href="modules.php" class="btn btn-light border">Back to Module List</a>
-                </div>
-            </div>
+            <?php
+            record_details_page_header(
+                'Module Details',
+                (string) $record['module_name'],
+                'modules.php',
+                'Back to Module List',
+                'bi-grid',
+                [
+                    record_details_id_chip((int) $record['id']),
+                    rbac_status_badge((string) ($record['status'] ?? '')),
+                ]
+            );
 
-            <div class="booking-card">
-                <div class="booking-header">
-                    <div class="booking-title"><?php echo htmlspecialchars($record['module_name']); ?></div>
-                </div>
-                <div class="p-3">
-                    <div class="row g-3">
-                        <div class="col-md-6"><strong>Module Name:</strong><br><?php echo htmlspecialchars($record['module_name']); ?></div>
-                        <div class="col-md-6"><strong>Module Slug:</strong><br><?php echo htmlspecialchars($record['module_slug']); ?></div>
-                        <div class="col-12"><strong>Description:</strong><br><?php echo htmlspecialchars(rbac_display_value($record['description'])); ?></div>
-                        <div class="col-md-6"><strong>Created By:</strong><br><?php echo htmlspecialchars(rbac_display_value($record['created_by'])); ?></div>
-                        <div class="col-md-6"><strong>Created At:</strong><br><?php echo rbac_format_datetime($record['created_at']); ?></div>
-                    </div>
-                </div>
-            </div>
+            record_details_card_start();
+
+            record_details_section_start(1, 'Module Information', 'Display name, slug, and description');
+            record_details_field('Module Name', (string) $record['module_name'], 'col-md-6');
+            record_details_field('Module Slug', (string) $record['module_slug'], 'col-md-6');
+            record_details_field('Status', rbac_status_badge((string) ($record['status'] ?? '')), 'col-md-6', false, true);
+            record_details_field('Description', rbac_display_value($record['description']), 'col-12', true);
+            record_details_section_end();
+
+            record_details_section_start(2, 'Audit Trail', 'Creation history', true);
+            record_details_field('Created By', rbac_display_value($record['created_by']), 'col-md-6');
+            record_details_field('Created At', rbac_format_datetime($record['created_at']), 'col-md-6');
+            record_details_section_end();
+
+            record_details_card_end();
+            ?>
         </div>
     </div>
 </body>

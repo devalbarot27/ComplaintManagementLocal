@@ -17,7 +17,7 @@ function after_market_list_scope(PDO $conn): array
         admin_refresh_session_role($conn);
     }
 
-    if (is_system_admin()) {
+    if (is_system_admin() || is_ccs_admin_user() || is_management_user()) {
         return [
             'where' => 'deleted_at IS NULL',
             'params' => [],
