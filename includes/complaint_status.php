@@ -69,7 +69,7 @@ function complaint_entry_list_scope(PDO $conn): array
         return [
             'where' => 'status = :status AND deleted_at IS NULL',
             'params' => [
-                ':status' => '3',
+                ':status' => COMPLAINT_STATUS_PENDING_HO,
             ],
         ];
     }

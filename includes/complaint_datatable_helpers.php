@@ -145,8 +145,7 @@ function dt_parse_closure_row_flags(array $row): array
 
 function complaint_user_can_closure(PDO $conn): bool
 {
-    return is_dealer_user() || is_dealer_engineer_user() || is_elgi_engineer_user() || is_system_admin() || is_ccs_admin_user()
-        && rbac_has_permission($conn, 'complaint-entry', 'complaint-closure');
+    return is_dealer_user() || is_dealer_engineer_user() || is_elgi_engineer_user() || is_system_admin() || is_ccs_admin_user() && rbac_has_permission($conn, 'complaint-entry', 'complaint-closure');
 }
 
 /**
