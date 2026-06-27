@@ -1,10 +1,28 @@
+<?php
+session_start();
+include('pdo_obconn.php');
+require_once __DIR__ . '/includes/admin_access_helpers.php';
+require_once __DIR__ . '/includes/rbac_access_helpers.php';
+
+if (empty($_SESSION['usr_name'])) {
+    header('Location: login.php');
+    exit;
+}
+
+admin_refresh_session_role($obconn);
+
+if (!rbac_user_can($obconn, 'lr-details', 'list')) {
+    header('Location: access_denied.php');
+    exit;
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dealer - Despatch Details</title>
+    <title>Dealer - LR Details</title>
     <?php include('header_css.php'); ?>
     <link href="css/orderbook_style.css" rel="stylesheet" />
     <link href="css/select2_change.css" rel="stylesheet" />

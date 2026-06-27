@@ -1,5 +1,27 @@
 <?php
 session_start();
+// Check assigned permission start
+include('pdo_obconn.php');
+require_once __DIR__ . '/includes/admin_access_helpers.php';
+require_once __DIR__ . '/includes/rbac_access_helpers.php';
+
+if (empty($_SESSION['usr_name'])) {
+    header('Location: login.php');
+    exit;
+}
+
+admin_refresh_session_role($obconn);
+
+$poModule = 'pending-order';
+$canListPendingOrder = rbac_user_can($obconn, $poModule, 'list');
+$canExportPendingOrder = rbac_user_can($obconn, $poModule, 'export-excel');
+$canViewPendingOrder = rbac_user_can($obconn, $poModule, 'view');
+
+if (!$canListPendingOrder) {
+    header('Location: access_denied.php');
+    exit;
+}
+//end
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -8,7 +30,7 @@ session_start();
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0">
-    <title>Dealer - Order Acknowledgement</title>
+    <title>Dealer - Pending Orders</title>
     <?php include('header_css.php'); ?>
     <link href="css/order_acknowledge_style.css" rel="stylesheet" />
     <link href="css/orderbook_style.css" rel="stylesheet" />
@@ -27,7 +49,7 @@ session_start();
                             <div class="page-header mb-3">
                                 <div class="header-flex">
                                     <button id="btnExcel"
-                                        class="add-item-btn btn-sm"
+                                        class="add-item-btn btn-sm<?php echo $canExportPendingOrder ? '' : ' d-none'; ?>"
                                         onclick="window.location.href='exportOrders.php'">
                                         <i class="fa fa-file-excel"></i>
                                         Export Excel
@@ -45,7 +67,6 @@ session_start();
                                             <th>AO Date</th>
                                             <th>Delivery Date</th>
                                             <th>Items</th>
-                                        </tr>
                                         </tr>
                                     </thead>
                                 </table>
@@ -76,6 +97,8 @@ session_start();
 </html>
 <?php include('script_js.php'); ?>
 <script>
+    const canViewPendingOrder = <?php echo $canViewPendingOrder ? 'true' : 'false'; ?>;
+
     $(document).ready(function() {
 
         $('#orderTable').DataTable({
@@ -110,12 +133,20 @@ session_start();
                 {
                     data: 'lines'
                 },
-            ]
+            ],
+            drawCallback: function() {
+                if (!canViewPendingOrder) {
+                    $('#orderTable tbody button[onclick*="openLineItems"]').remove();
+                }
+            }
         });
 
     });
 
     function openLineItems(orderNo) {
+        if (!canViewPendingOrder) {
+            return;
+        }
 
         $.ajax({
             url: 'orderRequest.php',

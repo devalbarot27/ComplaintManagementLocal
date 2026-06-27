@@ -1,7 +1,24 @@
 <?php
-session_start();
+session_start(); 
+// Check assigned permission
 include('pdo_obconn.php');
-$username = $_SESSION['usr_name'];
+require_once __DIR__ . '/includes/admin_access_helpers.php';
+require_once __DIR__ . '/includes/rbac_access_helpers.php';
+
+if (empty($_SESSION['usr_name'])) {
+    header('Location: login.php');
+    exit;
+}
+
+if (!isset($_SESSION['role'])) {
+    admin_refresh_session_role($obconn);
+}
+
+if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
+    header('Location: access_denied.php');
+    exit;
+}
+//end
 ?>
 <!DOCTYPE html>
 <html lang="en">

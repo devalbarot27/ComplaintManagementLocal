@@ -1,3 +1,21 @@
+<?php
+session_start();
+include('pdo_obconn.php');
+require_once __DIR__ . '/includes/admin_access_helpers.php';
+require_once __DIR__ . '/includes/rbac_access_helpers.php';
+
+if (empty($_SESSION['usr_name'])) {
+    header('Location: login.php');
+    exit;
+}
+
+admin_refresh_session_role($obconn);
+
+if (!rbac_user_can($obconn, 'despatch-details', 'list')) {
+    header('Location: access_denied.php');
+    exit;
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 

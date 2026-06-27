@@ -1,6 +1,27 @@
 <?php
 session_start();
-$refNo = $_GET['order_no'];
+include('pdo_obconn.php');
+require_once __DIR__ . '/includes/admin_access_helpers.php';
+require_once __DIR__ . '/includes/rbac_access_helpers.php';
+
+if (empty($_SESSION['usr_name'])) {
+    header('Location: login.php');
+    exit;
+}
+
+admin_refresh_session_role($obconn);
+
+$roModule = 'recent-orders';
+$canListRecentOrders = rbac_user_can($obconn, $roModule, 'list');
+$canExportRecentOrders = rbac_user_can($obconn, $roModule, 'export-excel');
+$canViewRecentOrders = rbac_user_can($obconn, $roModule, 'view');
+
+if (!$canListRecentOrders) {
+    header('Location: access_denied.php');
+    exit;
+}
+
+$refNo = trim((string) ($_GET['order_no'] ?? ''));
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -37,7 +58,7 @@ $refNo = $_GET['order_no'];
                             <div class="page-header mb-3">
                                 <div class="header-flex">
                                     <button id="btnExcel"
-                                        class="add-item-btn btn-sm"
+                                        class="add-item-btn btn-sm<?php echo $canExportRecentOrders ? '' : ' d-none'; ?>"
                                         onclick="window.location.href='exportOrders.php'">
                                         <i class="fa fa-file-excel"></i>
                                         Export Excel
@@ -93,6 +114,9 @@ $refNo = $_GET['order_no'];
 </html>
 <?php include('script_js.php'); ?>
 <script>
+    const canViewRecentOrders = <?php echo $canViewRecentOrders ? 'true' : 'false'; ?>;
+    const recentOrderRefNo = <?php echo json_encode($refNo, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+
     $(document).ready(function() {
 
         var table = $('#orderTable').DataTable({
@@ -130,12 +154,23 @@ $refNo = $_GET['order_no'];
                 {
                     data: 'lines'
                 },
-            ]
+            ],
+            drawCallback: function() {
+                if (!canViewRecentOrders) {
+                    $('#orderTable tbody button[onclick*="openLineItems"]').remove();
+                }
+            }
         });
-        table.search('<?php echo $refNo;?>').draw();
+
+        if (recentOrderRefNo !== '') {
+            table.search(recentOrderRefNo).draw();
+        }
     });
 
     function openLineItems(orderNo) {
+        if (!canViewRecentOrders) {
+            return;
+        }
 
         $.ajax({
             url: 'orderRequest.php',

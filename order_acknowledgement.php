@@ -1,5 +1,27 @@
 <?php
 session_start();
+// Check assigned permission start
+include('pdo_obconn.php');
+require_once __DIR__ . '/includes/admin_access_helpers.php';
+require_once __DIR__ . '/includes/rbac_access_helpers.php';
+
+if (empty($_SESSION['usr_name'])) {
+    header('Location: login.php');
+    exit;
+}
+
+admin_refresh_session_role($obconn);
+
+$oaModule = 'order-acknowledgement';
+$canListOrderAck = rbac_user_can($obconn, $oaModule, 'list');
+$canExportOrderAck = rbac_user_can($obconn, $oaModule, 'export-excel');
+$canViewOrderAck = rbac_user_can($obconn, $oaModule, 'view');
+
+if (!$canListOrderAck) {
+    header('Location: access_denied.php');
+    exit;
+}
+//end
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -36,7 +58,7 @@ session_start();
                             <div class="page-header mb-3">
                                 <div class="header-flex">
                                     <button id="btnExcel"
-                                        class="add-item-btn btn-sm"
+                                        class="add-item-btn btn-sm<?php echo $canExportOrderAck ? '' : ' d-none'; ?>"
                                         onclick="window.location.href='exportOrders.php'">
                                         <i class="fa fa-file-excel"></i>
                                         Export Excel
@@ -91,6 +113,8 @@ session_start();
 </html>
 <?php include('script_js.php'); ?>
 <script>
+    const canViewOrderAck = <?php echo $canViewOrderAck ? 'true' : 'false'; ?>;
+
     $(document).ready(function() {
 
         $('#orderTable').DataTable({
@@ -126,12 +150,20 @@ session_start();
                 {
                     data: 'lines'
                 },
-            ]
+            ],
+            drawCallback: function() {
+                if (!canViewOrderAck) {
+                    $('#orderTable tbody button[onclick*="openLineItems"]').remove();
+                }
+            }
         });
 
     });
 
     function openLineItems(orderNo) {
+        if (!canViewOrderAck) {
+            return;
+        }
 
         $.ajax({
             url: 'orderRequest.php',
