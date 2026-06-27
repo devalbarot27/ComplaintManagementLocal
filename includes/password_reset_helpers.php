@@ -174,7 +174,7 @@ function password_reset_update_password(PDO $obconn, string $username, string $n
         WHERE TRIM(username) = :username
           AND deleted_at IS NULL
     ");
-    $stmt->bindValue(':password', md5($newPassword));
+    $stmt->bindValue(':password', user_password_hash($newPassword));
     $stmt->bindValue(':username', trim($username));
     $stmt->execute();
 

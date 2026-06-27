@@ -294,7 +294,7 @@ function user_insert(PDO $conn, array $data, string $createdBy): void
     $stmt->bindValue(':username', $data['username']);
     $stmt->bindValue(':name', $data['name']);
     $stmt->bindValue(':email', $data['email']);
-    $stmt->bindValue(':password', md5($data['password']));
+    $stmt->bindValue(':password', user_password_hash($data['password']));
     $stmt->bindValue(':mobile_number', $data['mobile_number']);
     $stmt->bindValue(':created_by', $createdBy);
     $stmt->execute();
@@ -315,7 +315,7 @@ function user_update(PDO $conn, int $id, array $data): void
             WHERE id = :id
               AND deleted_at IS NULL
         ');
-        $stmt->bindValue(':password', md5($data['password']));
+        $stmt->bindValue(':password', user_password_hash($data['password']));
     } else {
         $stmt = $conn->prepare('
             UPDATE user_master SET

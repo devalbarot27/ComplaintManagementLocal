@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../includes/password_security_helpers.php';
+
 function login_remember_cookie_name(): string
 {
     return 'dp_remember';
@@ -209,10 +211,7 @@ function login_attempt_remember(PDO $dpconn, PDO $obconn): bool
 
 function login_verify_password(array $user, string $password): bool
 {
-    $storedPassword = strtolower(trim((string) ($user['password'] ?? '')));
-    $enteredPasswordHash = md5($password);
-
-    return $storedPassword !== '' && hash_equals($storedPassword, $enteredPasswordHash);
+    return user_password_verify($password, (string) ($user['password'] ?? ''));
 }
 
 function login_generate_otp(): string

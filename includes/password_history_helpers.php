@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/login_helpers.php';
+require_once __DIR__ . '/password_security_helpers.php';
 
 function password_history_limit(): int
 {
@@ -12,14 +12,9 @@ function password_history_reuse_error(): string
     return 'New password cannot be same as your last 3 passwords';
 }
 
-function password_history_hash(string $plainPassword): string
+function password_history_normalize_stored_hash(?string $hash): string
 {
-    return strtolower(md5($plainPassword));
-}
-
-function password_history_normalize_hash(?string $hash): string
-{
-    return strtolower(trim((string) $hash));
+    return trim((string) $hash);
 }
 
 function password_history_get_user_id(PDO $obconn, string $username): ?int
@@ -53,7 +48,7 @@ function password_history_get_recent_hashes(PDO $obconn, string $username, int $
 
     $hashes = [];
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-        $hash = password_history_normalize_hash($row['password'] ?? '');
+        $hash = password_history_normalize_stored_hash($row['password'] ?? '');
         if ($hash !== '') {
             $hashes[] = $hash;
         }
@@ -62,14 +57,22 @@ function password_history_get_recent_hashes(PDO $obconn, string $username, int $
     return $hashes;
 }
 
+/**
+ * Check whether a candidate password matches a stored hash from user_master
+ * or password_history.
+ */
+function password_history_matches(string $plainPassword, string $storedHash): bool
+{
+    return user_password_verify($plainPassword, password_history_normalize_stored_hash($storedHash));
+}
+
 function password_history_is_reused(
     PDO $obconn,
     string $username,
     string $newPassword,
     string $currentPasswordHash
 ): bool {
-    $newHash = password_history_hash($newPassword);
-    $blocked = [password_history_normalize_hash($currentPasswordHash)];
+    $blocked = [password_history_normalize_stored_hash($currentPasswordHash)];
 
     foreach (password_history_get_recent_hashes($obconn, $username, password_history_limit()) as $hash) {
         $blocked[] = $hash;
@@ -78,7 +81,7 @@ function password_history_is_reused(
     $blocked = array_values(array_unique(array_filter($blocked)));
 
     foreach ($blocked as $hash) {
-        if (hash_equals($hash, $newHash)) {
+        if (password_history_matches($newPassword, $hash)) {
             return true;
         }
     }
@@ -88,7 +91,7 @@ function password_history_is_reused(
 
 function password_history_record(PDO $obconn, string $username, string $oldPasswordHash): void
 {
-    $oldHash = password_history_normalize_hash($oldPasswordHash);
+    $oldHash = password_history_normalize_stored_hash($oldPasswordHash);
     if ($oldHash === '') {
         return;
     }

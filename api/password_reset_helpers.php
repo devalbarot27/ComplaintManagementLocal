@@ -169,7 +169,7 @@ function password_reset_update_password(PDO $conn, string $username, string $new
             pwddate = CURRENT_DATE
         WHERE TRIM(usr_name) = :usr_name
     ");
-    $stmt->bindValue(':password', md5($newPassword));
+    $stmt->bindValue(':password', user_password_hash($newPassword));
     $stmt->bindValue(':usr_name', trim($username));
     $stmt->execute();
 
@@ -185,7 +185,7 @@ function password_reset_update_password_master(PDO $conn, string $username, stri
         WHERE TRIM(username) = :username
           AND deleted_at IS NULL
     ");
-    $stmt->bindValue(':password', md5($newPassword));
+    $stmt->bindValue(':password', user_password_hash($newPassword));
     $stmt->bindValue(':username', trim($username));
     $stmt->execute();
 
