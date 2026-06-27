@@ -1,3 +1,4 @@
+<?php include __DIR__ . '/includes/favicon.php'; ?>
 
     <link rel="preconnect"
         href="https://fonts.googleapis.com">
