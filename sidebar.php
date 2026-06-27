@@ -101,14 +101,24 @@
         <i class="bi bi-x-lg"></i>
     </div>
 
-    <div class="brand-section">
-        <div class="brand-wrapper">
-            <div class="brand-logo">DP</div>
-            <div>
-                <div class="brand-title">Dealer Portal</div>
+    <div class="sidebar-brand">
+        <a href="dashboard.php" class="sidebar-brand__link" aria-label="Go to Dashboard">
+            <div class="sidebar-brand__logo-panel">
+                <?php
+                $brandLogoClass = 'sidebar-brand__logo-box';
+                $brandImageClass = 'sidebar-brand__logo';
+                include __DIR__ . '/includes/auth_brand_logo.php';
+                unset($brandLogoClass, $brandImageClass);
+                ?>
             </div>
-        </div>
+            <div class="sidebar-brand__copy">
+                <span class="sidebar-brand__title">Dealer Portal</span>
+                <span class="sidebar-brand__subtitle">Service &amp; Operations</span>
+            </div>
+        </a>
     </div>
+
+    <div class="sidebar-nav">
 
     <!-- OVERVIEW -->
     <div class="menu-section">
@@ -299,8 +309,7 @@
       </div>
       <?php } ?>
 
-
-
+    </div>
 
 </div>
 
