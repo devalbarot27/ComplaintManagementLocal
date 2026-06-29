@@ -1200,7 +1200,7 @@ class orderClass
                     'aodate'             => $row['orddt'],
                     'delydt'         => date('d-m-Y', strtotime($row['delydt'])),
                     'lines' => '<a href="order_data.php?order=' . urlencode($row['ordno']) .
-                        '&cuno=' . urlencode($row['cuno']) . '" target="_blank" style="text-decoration:none;">View</a>'
+                        '&cuno=' . urlencode($row['cuno']) . '&reference=pending_order" target="_blank" style="text-decoration:none;">View</a>'
                 ];
             }
             return json_encode([
@@ -1282,7 +1282,7 @@ class orderClass
                     'ordno'     => $row['ordno'],
                     'ord_date'  => date('d-m-Y', strtotime($row['ord_date'])),
                     'lines' => '<a href="order_data.php?order=' . urlencode($row['ordno']) .
-                        '&cuno=' . urlencode($row['cuno']) . '" target="_blank" style="text-decoration:none;">View</a>'
+                        '&cuno=' . urlencode($row['cuno']) . '&reference=order_acknowledgement" target="_blank" style="text-decoration:none;">View</a>'
                 ];
             }
             return json_encode([

@@ -146,13 +146,13 @@
         </a>
 
         <a href="order_acknowledgement.php"
-           class="menu-item <?= ($currentPage == 'order_acknowledgement.php') ? 'active' : '' ?>">
+           class="menu-item <?= ($currentPage == 'order_acknowledgement.php' || ($currentPage == 'order_data.php' && @$_GET['reference'] == 'order_acknowledgement')) ? 'active' : '' ?>">
             <i class="bi bi-check2-square"></i>
             Order Acknowledgement
         </a>
 
         <a href="pending_order.php"
-           class="menu-item <?= ($currentPage == 'pending_order.php') ? 'active' : '' ?>">
+           class="menu-item <?= ($currentPage == 'pending_order.php' || ($currentPage == 'order_data.php' && @$_GET['reference'] == 'pending_order')) ? 'active' : '' ?>">
             <i class="bi bi-clock-history"></i>
             Pending Orders
         </a>

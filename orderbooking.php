@@ -1,5 +1,6 @@
 <?php
 session_start(); 
+$username = $_SESSION['usr_name'];
 // Check assigned permission
 include('pdo_obconn.php');
 require_once __DIR__ . '/includes/admin_access_helpers.php';
