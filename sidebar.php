@@ -121,6 +121,7 @@
     <div class="sidebar-nav">
 
     <!-- OVERVIEW -->
+     <?php if(rbac_can_access_menu($obconn, 'dashboard.php')) { ?>
     <div class="menu-section">
         <div class="menu-heading">OVERVIEW</div>
 
@@ -130,6 +131,8 @@
             Dashboard
         </a>
     </div>
+    <?php } ?>
+    <!-- END OVERVIEW -->
 
     <?php
     $canOrderBooking = rbac_can_access_menu($obconn, 'orderbooking.php');
@@ -201,52 +204,70 @@
 
     <?php
     // AFTER MARKET ALWAYS SHOW
-    $showAfterMarket = true;
+    $canInstalledBase = rbac_can_access_menu($obconn, 'installed_base.php');
+    $canServiceLog = rbac_can_access_menu($obconn, 'service_log.php');
+    $canSparePartsConsumption = rbac_can_access_menu($obconn, 'spare_parts_consumption.php');
+    $showAfterMarket = $canInstalledBase
+        || $canServiceLog
+        || $canSparePartsConsumption;
     ?>
-    <?php if ($showAfterMarket) { ?>
+    <?php if ($canInstalledBase || $canServiceLog || $canSparePartsConsumption) { ?>
     <div class="menu-section">
         <div class="menu-heading">AFTER MARKET</div>
 
+        <?php if ($canInstalledBase) { ?>
         <a href="installed_base.php"
            class="menu-item <?= ($currentPage == 'installed_base.php' || $currentPage == 'installed_base_details.php') ? 'active' : '' ?>">
             <i class="bi bi-bank"></i>
             Installed Base Capture
         </a>
+        <?php } ?>
 
+        <?php if ($canServiceLog) { ?>
         <a href="service_log.php"
            class="menu-item <?= ($currentPage == 'service_log.php' || $currentPage == 'service_log_details.php') ? 'active' : '' ?>">
             <i class="bi bi-clipboard-pulse"></i>
             Service Log Capture
         </a>
+        <?php } ?>
 
+        <?php if ($canSparePartsConsumption) { ?>
         <a href="spare_parts_consumption.php"
            class="menu-item <?= ($currentPage == 'spare_parts_consumption.php' || $currentPage == 'spare_parts_consumption_details.php') ? 'active' : '' ?>">
             <i class="bi bi-gear"></i>
             Spare Parts Consumption
         </a>
+        <?php } ?>
     </div>
-    <?php } ?>
+    <?php } ?>  
 
     <?php
     // SUPPORT ALWAYS SHOW
-    $showSupport = true;
+    $canComplaintEntry = rbac_can_access_menu($obconn, 'new_complaint.php');
+    $canAssignedComplaintList = rbac_can_access_menu($obconn, 'dse_lse_complaint_list.php');
+    $showSupport = $canComplaintEntry
+        || $canAssignedComplaintList;
     ?>
-    <?php if ($showSupport) { ?>
+    <?php if ($canComplaintEntry || $canAssignedComplaintList) { ?>
     <div class="menu-section">
         <div class="menu-heading">SUPPORT</div>
 
+        <?php if ($canComplaintEntry) { ?>
         <a href="new_complaint.php"
            class="menu-item <?= ($currentPage == 'new_complaint.php' || ($currentPage == 'complaint_details.php' && @$_GET['from'] == 'entry')) ? 'active' : '' ?>">
             <i class="bi bi-credit-card"></i>
             Complaint Entry
         </a>
+        <?php } ?>
 
+        <?php if ($canAssignedComplaintList) { ?>
         <a href="dse_lse_complaint_list.php"
            class="menu-item <?= ($currentPage == 'dse_lse_complaint_list.php' || ($currentPage == 'complaint_details.php' && @$_GET['from'] == 'list')) ? 'active' : '' ?>">
             <i class="bi bi-microsoft-teams"></i>
             Assigned Complaint List
         </a>
-    </div>
+        <?php } ?>
+        </div>
     <?php } ?>
 
     <?php  if (is_system_admin()) { ?>
@@ -283,10 +304,8 @@
             Assign Permissions
         </a>
     </div>
-    <?php  } ?>
-
- <?php if (is_system_admin()) { ?>
-      <div class="menu-section">
+   
+    <div class="menu-section">
 
           <div class="menu-heading">
               SYSTEM CONFIGURATION
