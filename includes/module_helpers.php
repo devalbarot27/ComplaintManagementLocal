@@ -129,7 +129,7 @@ function module_create_default_permissions(PDO $conn, int $moduleId, string $cre
 {
     require_once __DIR__ . '/permission_helpers.php';
 
-    foreach (module_default_permissions() as $index => $permission) {
+    foreach (module_default_permissions() as $permission) {
         if (permission_slug_exists($conn, $moduleId, $permission['permission_slug'])) {
             continue;
         }
@@ -139,7 +139,6 @@ function module_create_default_permissions(PDO $conn, int $moduleId, string $cre
             'permission_name' => $permission['permission_name'],
             'permission_slug' => $permission['permission_slug'],
             'description' => $permission['description'],
-            'ordering' => ($index + 1) * 10,
             'status' => 'active',
         ], $createdBy);
     }

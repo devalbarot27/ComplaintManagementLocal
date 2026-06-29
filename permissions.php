@@ -150,11 +150,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_permission']))
                                     <input type="text" class="form-control" name="permission_slug" maxlength="100" placeholder="e.g. view">
                                     <div class="text-danger validation-msg" data-field="permission_slug"></div>
                                 </div>
-                                <div class="col-md-6 form-group">
-                                    <label class="form-label">Ordering</label>
-                                    <input type="number" class="form-control" name="ordering" min="0" step="1" value="0" placeholder="e.g. 10">
-                                    <div class="text-danger validation-msg" data-field="ordering"></div>
-                                </div>
                                 <div class="col-12 form-group">
                                     <label class="form-label">Description</label>
                                     <textarea class="form-control" name="description" rows="3" placeholder="Permission description"></textarea>
@@ -179,13 +174,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_permission']))
                     <table class="table table-hover booking-table w-100" id="permissionsTable">
                         <thead>
                             <tr>
-                                <th width="7%">ID</th>
-                                <th width="8%">Ordering</th>
-                                <th width="14%">Module</th>
-                                <th width="14%">Permission Name</th>
-                                <th width="14%">Permission Slug</th>
-                                <th width="26%">Description</th>
-                                <th width="13%">Created At</th>
+                                <th width="8%">ID</th>
+                                <th width="16%">Module</th>
+                                <th width="16%">Permission Name</th>
+                                <th width="16%">Permission Slug</th>
+                                <th width="28%">Description</th>
+                                <th width="14%">Created At</th>
                                 <th width="8%">Action</th>
                             </tr>
                         </thead>

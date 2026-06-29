@@ -8,9 +8,9 @@ require_once dirname(__DIR__) . '/includes/permission_helpers.php';
 
 admin_api_require_system_admin($obconn);
 
-$allowedOrderColumns = ['id', 'ordering', 'module_name', 'permission_name', 'permission_slug', 'description', 'created_at'];
+$allowedOrderColumns = ['id', 'module_name', 'permission_name', 'permission_slug', 'description', 'created_at'];
 
-$req = dt_parse_request($allowedOrderColumns, 'ordering');
+$req = dt_parse_request($allowedOrderColumns, 'id');
 $baseWhere = 'p.deleted_at IS NULL';
 $filterParams = [];
 
@@ -45,11 +45,9 @@ $recordsFiltered = (int) $countFilteredStmt->fetch(PDO::FETCH_ASSOC)['total'];
 
 $orderColumn = $req['orderColumn'];
 if ($orderColumn === 'module_name') {
-    $orderBy = "m.ordering ASC, m.module_name {$req['orderDir']}, p.ordering ASC";
-} elseif ($orderColumn === 'ordering') {
-    $orderBy = "m.ordering ASC, p.ordering {$req['orderDir']}, p.permission_name ASC";
+    $orderBy = "m.ordering ASC, m.module_name {$req['orderDir']}";
 } else {
-    $orderBy = "m.ordering ASC, p.ordering ASC, p.{$orderColumn} {$req['orderDir']}";
+    $orderBy = "m.ordering ASC, p.{$orderColumn} {$req['orderDir']}";
 }
 
 $dataQuery = "
@@ -57,7 +55,6 @@ $dataQuery = "
         p.id,
         p.module_id,
         m.module_name,
-        p.ordering,
         p.permission_name,
         p.permission_slug,
         p.description,
@@ -82,7 +79,6 @@ $data = [];
 foreach ($dataStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
     $data[] = [
         'id' => '#' . (int) $row['id'],
-        'ordering' => (int) $row['ordering'],
         'module_name' => htmlspecialchars($row['module_name'], ENT_QUOTES, 'UTF-8'),
         'permission_name' => htmlspecialchars($row['permission_name'], ENT_QUOTES, 'UTF-8'),
         'permission_slug' => htmlspecialchars($row['permission_slug'], ENT_QUOTES, 'UTF-8'),
