@@ -153,6 +153,7 @@ function rbac_clear_permissions_cache(): void
 function rbac_modules_enforcing_role_permissions(): array
 {
     return [
+        'dashboard',
         'complaint-entry',
         'assigned-complaint-list',
         'installed-base-capture',

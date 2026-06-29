@@ -1,8 +1,32 @@
 <?php
-require_once __DIR__ . '/pdo_obconn.php';
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+// Check assigned permission
+include('pdo_obconn.php');
+require_once __DIR__ . '/includes/admin_access_helpers.php';
+require_once __DIR__ . '/includes/rbac_access_helpers.php';
 require_once __DIR__ . '/includes/dashboard_helpers.php';
+$dashboardModule = 'dashboard';
+$canViewDashboard = rbac_user_can($obconn, $dashboardModule, 'view');
+if (empty($_SESSION['usr_name'])) {
+    header('Location: login.php');
+    exit;
+}
 
-$userName = $_SESSION['usr_name'] ?? '102464';
+if (!isset($_SESSION['role'])) {
+    admin_refresh_session_role($obconn);
+}
+
+if (!rbac_user_can($obconn, $dashboardModule, 'view')) {
+    header('Location: access_denied.php');
+    exit;
+}
+//end
+
+
+
+$userName = $_SESSION['usr_name'] ?? '0';
 $dashboardStats = dashboard_fetch_stats($dpconn, $obconn, $userName, $_GET['period'] ?? null);
 
 $selectedPeriod = $dashboardStats['selected_period'];
