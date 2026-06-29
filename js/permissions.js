@@ -30,6 +30,13 @@ function initPermissionsFormValidation() {
         permission_slug: {
             presence: { allowEmpty: false, message: '^Permission Slug is required' },
             permissionSlugFormat: true
+        },
+        ordering: {
+            numericality: {
+                onlyInteger: true,
+                greaterThanOrEqualTo: 0,
+                message: '^Ordering must be zero or a positive whole number'
+            }
         }
     };
 
@@ -93,10 +100,11 @@ function initPermissionsDatatable() {
         processing: true,
         serverSide: true,
         ajax: { url: 'api/permissions_datatable.php', type: 'POST' },
-        order: [[0, 'desc']],
+        order: [[1, 'asc']],
         pageLength: 10,
         columns: [
             { data: 'id' },
+            { data: 'ordering' },
             { data: 'module_name' },
             { data: 'permission_name' },
             { data: 'permission_slug' },
@@ -123,6 +131,7 @@ function fillPermissionForm(record) {
     form.querySelector('[name="module_id"]').value = record.module_id || '';
     form.querySelector('[name="permission_name"]').value = record.permission_name || '';
     form.querySelector('[name="permission_slug"]').value = record.permission_slug || '';
+    form.querySelector('[name="ordering"]').value = record.ordering ?? 0;
     form.querySelector('[name="description"]').value = record.description || '';
 }
 
@@ -135,6 +144,10 @@ function resetPermissionForm() {
     document.getElementById('permissionRecordId').value = '';
     document.getElementById('permissionFormModeLabel').textContent = 'Add Permission';
     document.getElementById('submitPermissionBtn').innerHTML = '<i class="bi bi-check-lg"></i> Save Permission';
+    const orderingInput = form.querySelector('[name="ordering"]');
+    if (orderingInput) {
+        orderingInput.value = '0';
+    }
     form.querySelectorAll('.is-invalid').forEach(function (el) {
         el.classList.remove('is-invalid');
     });

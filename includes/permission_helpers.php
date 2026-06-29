@@ -9,6 +9,7 @@ function permission_from_post(array $post): array
         'permission_name' => trim((string) ($post['permission_name'] ?? '')),
         'permission_slug' => strtolower(trim((string) ($post['permission_slug'] ?? ''))),
         'description' => trim((string) ($post['description'] ?? '')),
+        'ordering' => max(0, (int) ($post['ordering'] ?? 0)),
         'status' => 'active',
     ];
 }
@@ -29,6 +30,10 @@ function permission_validate(array $data): ?string
 
     if ($error = rbac_validate_slug($data['permission_slug'])) {
         return str_replace('Slug', 'Permission Slug', $error);
+    }
+
+    if ($data['ordering'] < 0) {
+        return 'Ordering cannot be negative.';
     }
 
     return null;
@@ -133,15 +138,16 @@ function permission_insert(PDO $conn, array $data, string $createdBy): void
 {
     $stmt = $conn->prepare('
         INSERT INTO permissions (
-            module_id, permission_name, permission_slug, description, status, created_by, created_at
+            module_id, permission_name, permission_slug, description, ordering, status, created_by, created_at
         ) VALUES (
-            :module_id, :permission_name, :permission_slug, :description, :status, :created_by, CURRENT_TIMESTAMP
+            :module_id, :permission_name, :permission_slug, :description, :ordering, :status, :created_by, CURRENT_TIMESTAMP
         )
     ');
     $stmt->bindValue(':module_id', (int) $data['module_id'], PDO::PARAM_INT);
     $stmt->bindValue(':permission_name', $data['permission_name']);
     $stmt->bindValue(':permission_slug', $data['permission_slug']);
     $stmt->bindValue(':description', $data['description'] !== '' ? $data['description'] : null);
+    $stmt->bindValue(':ordering', (int) $data['ordering'], PDO::PARAM_INT);
     $stmt->bindValue(':status', $data['status']);
     $stmt->bindValue(':created_by', $createdBy);
     $stmt->execute();
@@ -155,6 +161,7 @@ function permission_update(PDO $conn, int $id, array $data): void
             permission_name = :permission_name,
             permission_slug = :permission_slug,
             description = :description,
+            ordering = :ordering,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = :id
           AND deleted_at IS NULL
@@ -163,6 +170,7 @@ function permission_update(PDO $conn, int $id, array $data): void
     $stmt->bindValue(':permission_name', $data['permission_name']);
     $stmt->bindValue(':permission_slug', $data['permission_slug']);
     $stmt->bindValue(':description', $data['description'] !== '' ? $data['description'] : null);
+    $stmt->bindValue(':ordering', (int) $data['ordering'], PDO::PARAM_INT);
     $stmt->bindValue(':id', $id, PDO::PARAM_INT);
     $stmt->execute();
 }
@@ -196,9 +204,11 @@ function permission_get_by_module_grouped(PDO $conn): array
             m.id AS module_id,
             m.module_name,
             m.module_slug,
+            m.ordering AS module_ordering,
             p.id AS permission_id,
             p.permission_name,
             p.permission_slug,
+            p.ordering AS permission_ordering,
             p.status
         FROM modules m
         LEFT JOIN permissions p
@@ -207,7 +217,7 @@ function permission_get_by_module_grouped(PDO $conn): array
            AND p.status = 'active'
         WHERE m.deleted_at IS NULL
           AND m.status = 'active'
-        ORDER BY m.module_name ASC, p.permission_name ASC
+        ORDER BY m.ordering ASC, m.module_name ASC, p.ordering ASC, p.permission_name ASC
     ");
 
     $grouped = [];
@@ -218,6 +228,7 @@ function permission_get_by_module_grouped(PDO $conn): array
                 'module_id' => $moduleId,
                 'module_name' => $row['module_name'],
                 'module_slug' => $row['module_slug'],
+                'ordering' => (int) ($row['module_ordering'] ?? 0),
                 'permissions' => [],
             ];
         }
@@ -227,6 +238,7 @@ function permission_get_by_module_grouped(PDO $conn): array
                 'id' => (int) $row['permission_id'],
                 'permission_name' => $row['permission_name'],
                 'permission_slug' => $row['permission_slug'],
+                'ordering' => (int) ($row['permission_ordering'] ?? 0),
             ];
         }
     }

@@ -18,6 +18,7 @@ function module_from_post(array $post): array
         'module_name' => trim((string) ($post['module_name'] ?? '')),
         'module_slug' => strtolower(trim((string) ($post['module_slug'] ?? ''))),
         'description' => trim((string) ($post['description'] ?? '')),
+        'ordering' => max(0, (int) ($post['ordering'] ?? 0)),
         'status' => 'active',
         'create_default_permissions' => !empty($post['create_default_permissions']),
     ];
@@ -35,6 +36,10 @@ function module_validate(array $data): ?string
 
     if ($error = rbac_validate_slug($data['module_slug'])) {
         return str_replace('Slug', 'Module Slug', $error);
+    }
+
+    if ($data['ordering'] < 0) {
+        return 'Ordering cannot be negative.';
     }
 
     return null;
@@ -87,11 +92,11 @@ function module_get_by_id(PDO $conn, int $id): ?array
 function module_get_all_active(PDO $conn): array
 {
     $stmt = $conn->query("
-        SELECT id, module_name, module_slug
+        SELECT id, module_name, module_slug, ordering
         FROM modules
         WHERE deleted_at IS NULL
           AND status = 'active'
-        ORDER BY module_name ASC
+        ORDER BY ordering ASC, module_name ASC
     ");
 
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -124,7 +129,7 @@ function module_create_default_permissions(PDO $conn, int $moduleId, string $cre
 {
     require_once __DIR__ . '/permission_helpers.php';
 
-    foreach (module_default_permissions() as $permission) {
+    foreach (module_default_permissions() as $index => $permission) {
         if (permission_slug_exists($conn, $moduleId, $permission['permission_slug'])) {
             continue;
         }
@@ -134,6 +139,7 @@ function module_create_default_permissions(PDO $conn, int $moduleId, string $cre
             'permission_name' => $permission['permission_name'],
             'permission_slug' => $permission['permission_slug'],
             'description' => $permission['description'],
+            'ordering' => ($index + 1) * 10,
             'status' => 'active',
         ], $createdBy);
     }
@@ -142,13 +148,14 @@ function module_create_default_permissions(PDO $conn, int $moduleId, string $cre
 function module_insert(PDO $conn, array $data, string $createdBy): int
 {
     $stmt = $conn->prepare('
-        INSERT INTO modules (module_name, module_slug, description, status, created_by, created_at)
-        VALUES (:module_name, :module_slug, :description, :status, :created_by, CURRENT_TIMESTAMP)
+        INSERT INTO modules (module_name, module_slug, description, ordering, status, created_by, created_at)
+        VALUES (:module_name, :module_slug, :description, :ordering, :status, :created_by, CURRENT_TIMESTAMP)
         RETURNING id
     ');
     $stmt->bindValue(':module_name', $data['module_name']);
     $stmt->bindValue(':module_slug', $data['module_slug']);
     $stmt->bindValue(':description', $data['description'] !== '' ? $data['description'] : null);
+    $stmt->bindValue(':ordering', (int) $data['ordering'], PDO::PARAM_INT);
     $stmt->bindValue(':status', $data['status']);
     $stmt->bindValue(':created_by', $createdBy);
     $stmt->execute();
@@ -169,6 +176,7 @@ function module_update(PDO $conn, int $id, array $data): void
             module_name = :module_name,
             module_slug = :module_slug,
             description = :description,
+            ordering = :ordering,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = :id
           AND deleted_at IS NULL
@@ -176,6 +184,7 @@ function module_update(PDO $conn, int $id, array $data): void
     $stmt->bindValue(':module_name', $data['module_name']);
     $stmt->bindValue(':module_slug', $data['module_slug']);
     $stmt->bindValue(':description', $data['description'] !== '' ? $data['description'] : null);
+    $stmt->bindValue(':ordering', (int) $data['ordering'], PDO::PARAM_INT);
     $stmt->bindValue(':id', $id, PDO::PARAM_INT);
     $stmt->execute();
 }

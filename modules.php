@@ -134,6 +134,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_module'])) {
                                     <input type="text" class="form-control" name="module_slug" maxlength="100" placeholder="e.g. user-management">
                                     <div class="text-danger validation-msg" data-field="module_slug"></div>
                                 </div>
+                                <div class="col-md-6 form-group">
+                                    <label class="form-label">Ordering</label>
+                                    <input type="number" class="form-control" name="ordering" min="0" step="1" value="0" placeholder="e.g. 10">
+                                    <div class="text-danger validation-msg" data-field="ordering"></div>
+                                </div>
                                 <div class="col-md-6 form-group" id="defaultPermissionsWrap">
                                     <label class="form-label d-block">&nbsp;</label>
                                     <div class="form-check mt-2">
@@ -167,11 +172,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_module'])) {
                     <table class="table table-hover booking-table w-100" id="modulesTable">
                         <thead>
                             <tr>
-                                <th width="8%">ID</th>
-                                <th width="20%">Module Name</th>
-                                <th width="18%">Module Slug</th>
-                                <th width="36%">Description</th>
-                                <th width="14%">Created At</th>
+                                <th width="7%">ID</th>
+                                <th width="8%">Ordering</th>
+                                <th width="18%">Module Name</th>
+                                <th width="16%">Module Slug</th>
+                                <th width="32%">Description</th>
+                                <th width="13%">Created At</th>
                                 <th width="8%">Action</th>
                             </tr>
                         </thead>

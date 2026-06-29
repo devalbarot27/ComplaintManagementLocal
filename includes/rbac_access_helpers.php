@@ -48,7 +48,7 @@ function rbac_page_access_rules(): array
         'index.php' => ['module' => 'dashboard', 'permission' => 'view'],
         'orderbooking.php' => ['module' => 'order-booking', 'permission' => 'create-order'],
         'order_acknowledgement.php' => ['module' => 'order-acknowledgement', 'permission' => 'list'],
-        //'pending_order.php' => ['module' => 'pending-order', 'permission' => 'list'],
+        'pending_order.php' => ['module' => 'pending-order', 'permission' => 'list'],
         'recent_orders.php' => ['module' => 'recent-orders', 'permission' => 'list'],
         'despatch_details.php' => ['module' => 'despatch-details', 'permission' => 'list'],
         'lr_details.php' => ['module' => 'lr-details', 'permission' => 'list'],
@@ -264,9 +264,9 @@ function rbac_has_permission(PDO $conn, string $moduleSlug, string $permissionSl
         return rbac_role_has_permission($conn, $moduleSlug, $permissionSlug);
     }
 
-    if (is_system_admin()) {
-        return true;
-    }
+    // if (is_system_admin()) {
+    //     return true;
+    // }
 
     return rbac_role_has_permission($conn, $moduleSlug, $permissionSlug);
 }

@@ -58,6 +58,7 @@ if (!$record) {
             record_details_section_start(1, 'Permission Information', 'Module mapping and access definition');
             record_details_field('Permission Name', (string) $record['permission_name'], 'col-md-6');
             record_details_field('Permission Slug', (string) $record['permission_slug'], 'col-md-6');
+            record_details_field('Ordering', (string) ((int) ($record['ordering'] ?? 0)), 'col-md-6');
             record_details_field('Module', (string) $record['module_name'], 'col-md-6');
             record_details_field('Status', rbac_status_badge((string) ($record['status'] ?? '')), 'col-md-6', false, true);
             record_details_field('Description', rbac_display_value($record['description']), 'col-12', true);

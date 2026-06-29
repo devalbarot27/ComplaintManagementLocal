@@ -24,5 +24,6 @@ echo json_encode([
     'permission_name' => $row['permission_name'],
     'permission_slug' => $row['permission_slug'],
     'description' => $row['description'] ?? '',
+    'ordering' => (int) ($row['ordering'] ?? 0),
     'status' => $row['status'],
 ], JSON_UNESCAPED_UNICODE);

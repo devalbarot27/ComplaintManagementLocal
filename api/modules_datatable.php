@@ -8,9 +8,9 @@ require_once dirname(__DIR__) . '/includes/module_helpers.php';
 
 admin_api_require_system_admin($obconn);
 
-$allowedOrderColumns = ['id', 'module_name', 'module_slug', 'description', 'created_at'];
+$allowedOrderColumns = ['id', 'ordering', 'module_name', 'module_slug', 'description', 'created_at'];
 
-$req = dt_parse_request($allowedOrderColumns, 'id');
+$req = dt_parse_request($allowedOrderColumns, 'ordering');
 $baseWhere = 'deleted_at IS NULL';
 $filterParams = [];
 
@@ -34,7 +34,7 @@ $countFilteredStmt->execute();
 $recordsFiltered = (int) $countFilteredStmt->fetch(PDO::FETCH_ASSOC)['total'];
 
 $dataQuery = "
-    SELECT id, module_name, module_slug, description, created_at
+    SELECT id, ordering, module_name, module_slug, description, created_at
     FROM modules
     WHERE {$filterWhere}
     ORDER BY {$req['orderColumn']} {$req['orderDir']}
@@ -54,6 +54,7 @@ $data = [];
 foreach ($dataStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
     $data[] = [
         'id' => '#' . (int) $row['id'],
+        'ordering' => (int) $row['ordering'],
         'module_name' => htmlspecialchars($row['module_name'], ENT_QUOTES, 'UTF-8'),
         'module_slug' => htmlspecialchars($row['module_slug'], ENT_QUOTES, 'UTF-8'),
         'description' => htmlspecialchars(rbac_display_value($row['description']), ENT_QUOTES, 'UTF-8'),

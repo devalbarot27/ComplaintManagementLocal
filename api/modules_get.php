@@ -23,5 +23,6 @@ echo json_encode([
     'module_name' => $row['module_name'],
     'module_slug' => $row['module_slug'],
     'description' => $row['description'] ?? '',
+    'ordering' => (int) ($row['ordering'] ?? 0),
     'status' => $row['status'],
 ], JSON_UNESCAPED_UNICODE);

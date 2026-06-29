@@ -132,48 +132,70 @@
     </div>
 
     <?php
-    // RBAC DISABLED: ORDERS BLOCK ALWAYS SHOW
-    $showOrders = true;
+    $canOrderBooking = rbac_can_access_menu($obconn, 'orderbooking.php');
+    $canOrderAcknowledgement = rbac_can_access_menu($obconn, 'order_acknowledgement.php');
+    $canPendingOrders = rbac_can_access_menu($obconn, 'pending_order.php');
+    $canRecentOrders = rbac_can_access_menu($obconn, 'recent_orders.php');
+    $canDespatchDetails = rbac_can_access_menu($obconn, 'despatch_details.php');
+    $canLrDetails = rbac_can_access_menu($obconn, 'lr_details.php');
+    $showOrders = $canOrderBooking
+        || $canOrderAcknowledgement
+        || $canPendingOrders
+        || $canRecentOrders
+        || $canDespatchDetails
+        || $canLrDetails;
     ?>
     <?php if ($showOrders) { ?>
     <div class="menu-section">
         <div class="menu-heading">ORDERS</div>
 
+        <?php if ($canOrderBooking) { ?>
         <a href="orderbooking.php"
            class="menu-item <?= ($currentPage == 'orderbooking.php') ? 'active' : '' ?>">
             <i class="bi bi-cart"></i>
             Order Booking
         </a>
+        <?php } ?>
 
+        <?php if ($canOrderAcknowledgement) { ?>
         <a href="order_acknowledgement.php"
            class="menu-item <?= ($currentPage == 'order_acknowledgement.php' || ($currentPage == 'order_data.php' && @$_GET['reference'] == 'order_acknowledgement')) ? 'active' : '' ?>">
             <i class="bi bi-check2-square"></i>
             Order Acknowledgement
         </a>
+        <?php } ?>
 
+        <?php if ($canPendingOrders) { ?>
         <a href="pending_order.php"
            class="menu-item <?= ($currentPage == 'pending_order.php' || ($currentPage == 'order_data.php' && @$_GET['reference'] == 'pending_order')) ? 'active' : '' ?>">
             <i class="bi bi-clock-history"></i>
             Pending Orders
         </a>
+        <?php } ?>
 
+        <?php if ($canRecentOrders) { ?>
         <a href="recent_orders.php"
            class="menu-item <?= ($currentPage == 'recent_orders.php') ? 'active' : '' ?>">
             <i class="bi bi-arrow-down-left-square"></i>
             Recent Orders
         </a>
+        <?php } ?>
 
+        <?php if ($canDespatchDetails) { ?>
         <a href="despatch_details.php"
            class="menu-item <?= ($currentPage == 'despatch_details.php') ? 'active' : '' ?>">
             <i class="bi bi-capslock"></i>
             Despatch Details
         </a>
+        <?php } ?>
 
+        <?php if ($canLrDetails) { ?>
         <a href="lr_details.php"
            class="menu-item <?= ($currentPage == 'lr_details.php') ? 'active' : '' ?>">
             <i class="bi bi-bus-front"></i>
             LR Details
         </a>
+        <?php } ?>
     </div>
     <?php } ?>
 

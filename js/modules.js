@@ -27,6 +27,13 @@ function initModulesFormValidation() {
         module_slug: {
             presence: { allowEmpty: false, message: '^Module Slug is required' },
             moduleSlugFormat: true
+        },
+        ordering: {
+            numericality: {
+                onlyInteger: true,
+                greaterThanOrEqualTo: 0,
+                message: '^Ordering must be zero or a positive whole number'
+            }
         }
     };
 
@@ -90,10 +97,11 @@ function initModulesDatatable() {
         processing: true,
         serverSide: true,
         ajax: { url: 'api/modules_datatable.php', type: 'POST' },
-        order: [[0, 'desc']],
+        order: [[1, 'asc']],
         pageLength: 10,
         columns: [
             { data: 'id' },
+            { data: 'ordering' },
             { data: 'module_name' },
             { data: 'module_slug' },
             { data: 'description' },
@@ -118,6 +126,7 @@ function fillModuleForm(record) {
 
     form.querySelector('[name="module_name"]').value = record.module_name || '';
     form.querySelector('[name="module_slug"]').value = record.module_slug || '';
+    form.querySelector('[name="ordering"]').value = record.ordering ?? 0;
     form.querySelector('[name="description"]').value = record.description || '';
 
     const defaultWrap = document.getElementById('defaultPermissionsWrap');
@@ -137,6 +146,10 @@ function resetModuleForm() {
     document.getElementById('submitModuleBtn').innerHTML = '<i class="bi bi-check-lg"></i> Save Module';
     document.getElementById('createDefaultPermissions').checked = true;
     document.getElementById('defaultPermissionsWrap').style.display = '';
+    const orderingInput = form.querySelector('[name="ordering"]');
+    if (orderingInput) {
+        orderingInput.value = '0';
+    }
     form.querySelectorAll('.is-invalid').forEach(function (el) {
         el.classList.remove('is-invalid');
     });
