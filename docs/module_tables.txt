@@ -1,0 +1,76 @@
+Users
+user_master
+roles
+
+Roles
+roles
+
+Modules
+modules
+
+Permissions
+permissions
+modules
+
+Assign Permission
+role_permissions
+roles
+modules
+permissions
+
+Complaint Category
+complaint_categories
+user_master
+
+Industry Segment
+industry_segments
+
+Warranty / Chargeable
+warranty_chargeable_types
+
+Part Replaced
+part_replaced_masters
+
+Customer Feedback
+customer_feedback_options
+
+Reason
+reason_masters
+
+Installed Base Capture
+installed_base
+industry_segments
+pendingordersnew
+
+Service Log Capture
+service_logs
+service_log_part_replacements
+installed_base
+warranty_chargeable_types
+part_replaced_masters
+customer_feedback_options
+
+Spare Parts Consumption
+spare_parts_consumption
+spare_parts_consumption_items
+installed_base
+service_logs
+warranty_chargeable_types
+reason_masters
+
+Complaint Entry
+complaints
+complaint_assignments
+complaint_activity_logs
+complaint_closures
+complaint_categories
+customer_feedback_options
+user_master
+
+Assigned Complaint List
+complaints
+complaint_assignments
+complaint_service_updates
+complaint_activity_logs
+complaint_closures
+user_master

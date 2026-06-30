@@ -28,4 +28,5 @@ echo json_encode([
     'name' => $row['name'],
     'email' => $row['email'],
     'mobile_number' => $row['mobile_number'],
+    'sales_coordinator_id' => isset($row['sales_coordinator_id']) ? (int) $row['sales_coordinator_id'] : 0,
 ]);

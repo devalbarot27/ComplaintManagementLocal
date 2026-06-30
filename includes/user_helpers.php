@@ -3,6 +3,223 @@
 require_once __DIR__ . '/current_username_helpers.php';
 require_once __DIR__ . '/password_reset_helpers.php';
 require_once __DIR__ . '/role_helpers.php';
+require_once __DIR__ . '/admin_access_helpers.php';
+
+/**
+ * @return array<int, int>
+ */
+function user_roles_requiring_sales_coordinator(): array
+{
+    return [
+        DEALER_USER_ROLE,
+        DEALER_ENGINEER_USER_ROLE,
+        ELGI_ENGINEER_USER_ROLE,
+    ];
+}
+
+function user_role_requires_sales_coordinator(int $roleId): bool
+{
+    return in_array($roleId, user_roles_requiring_sales_coordinator(), true);
+}
+
+function user_sales_coordinator_role_name(): string
+{
+    return 'Sales Coordinator';
+}
+
+function user_sales_coordinator_role_id(PDO $conn): ?int
+{
+    static $cachedRoleId = null;
+    static $cacheConnId = null;
+
+    $connId = spl_object_id($conn);
+    if ($cacheConnId === $connId && $cachedRoleId !== null) {
+        return $cachedRoleId > 0 ? $cachedRoleId : null;
+    }
+
+    $stmt = $conn->prepare('
+        SELECT id
+        FROM roles
+        WHERE deleted_at IS NULL
+          AND status = \'active\'
+          AND LOWER(TRIM(role_name)) = LOWER(TRIM(:role_name))
+        LIMIT 1
+    ');
+    $stmt->bindValue(':role_name', user_sales_coordinator_role_name());
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    $cacheConnId = $connId;
+    $cachedRoleId = $row ? (int) $row['id'] : 0;
+
+    return $cachedRoleId > 0 ? $cachedRoleId : null;
+}
+
+/**
+ * @return array<int, array<string, mixed>>
+ */
+function user_sales_coordinator_options(PDO $conn): array
+{
+    $stmt = $conn->prepare('
+        SELECT um.id, um.username, um.name
+        FROM user_master um
+        INNER JOIN roles r
+            ON r.id = um.role
+           AND r.deleted_at IS NULL
+           AND r.status = \'active\'
+           AND LOWER(TRIM(r.role_name)) = LOWER(TRIM(:role_name))
+        WHERE um.deleted_at IS NULL
+        ORDER BY um.name ASC, um.username ASC
+    ');
+    $stmt->bindValue(':role_name', user_sales_coordinator_role_name());
+    $stmt->execute();
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Sales Coordinator options for add/edit forms, keeping the current selection when editing.
+ *
+ * @return array<int, array<string, mixed>>
+ */
+function user_sales_coordinator_options_for_form(PDO $conn, ?int $selectedSalesCoordinatorId = null): array
+{
+    $options = user_sales_coordinator_options($conn);
+    if ($selectedSalesCoordinatorId === null || $selectedSalesCoordinatorId <= 0) {
+        return $options;
+    }
+
+    foreach ($options as $option) {
+        if ((int) ($option['id'] ?? 0) === $selectedSalesCoordinatorId) {
+            return $options;
+        }
+    }
+
+    $stmt = $conn->prepare('
+        SELECT id, username, name
+        FROM user_master
+        WHERE id = :id
+          AND deleted_at IS NULL
+        LIMIT 1
+    ');
+    $stmt->bindValue(':id', $selectedSalesCoordinatorId, PDO::PARAM_INT);
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($row) {
+        array_unshift($options, $row);
+    }
+
+    return $options;
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function user_form_record_from_row(array $row): array
+{
+    return [
+        'id' => (int) ($row['id'] ?? 0),
+        'role' => (int) ($row['role'] ?? 0),
+        'username' => (string) ($row['username'] ?? ''),
+        'name' => (string) ($row['name'] ?? ''),
+        'email' => (string) ($row['email'] ?? ''),
+        'mobile_number' => (string) ($row['mobile_number'] ?? ''),
+        'sales_coordinator_id' => isset($row['sales_coordinator_id']) ? (int) $row['sales_coordinator_id'] : 0,
+    ];
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function user_form_record_from_post(array $data, int $id): array
+{
+    return [
+        'id' => $id,
+        'role' => (int) ($data['role'] ?? 0),
+        'username' => (string) ($data['username'] ?? ''),
+        'name' => (string) ($data['name'] ?? ''),
+        'email' => (string) ($data['email'] ?? ''),
+        'mobile_number' => (string) ($data['mobile_number'] ?? ''),
+        'sales_coordinator_id' => (int) ($data['sales_coordinator_id'] ?? 0),
+    ];
+}
+
+function user_sales_coordinator_option_label(array $user): string
+{
+    $name = trim((string) ($user['name'] ?? ''));
+    if ($name !== '') {
+        return $name;
+    }
+
+    return trim((string) ($user['username'] ?? ''));
+}
+
+function user_sales_coordinator_display_name(PDO $conn, ?int $salesCoordinatorId): string
+{
+    if ($salesCoordinatorId === null || $salesCoordinatorId <= 0) {
+        return '-';
+    }
+
+    $stmt = $conn->prepare('
+        SELECT um.username, um.name
+        FROM user_master um
+        INNER JOIN roles r
+            ON r.id = um.role
+           AND r.deleted_at IS NULL
+           AND r.status = \'active\'
+           AND LOWER(TRIM(r.role_name)) = LOWER(TRIM(:role_name))
+        WHERE um.id = :id
+          AND um.deleted_at IS NULL
+        LIMIT 1
+    ');
+    $stmt->bindValue(':id', $salesCoordinatorId, PDO::PARAM_INT);
+    $stmt->bindValue(':role_name', user_sales_coordinator_role_name());
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$row) {
+        return '-';
+    }
+
+    return user_sales_coordinator_option_label($row);
+}
+
+function user_is_valid_sales_coordinator(PDO $conn, int $salesCoordinatorId): bool
+{
+    if ($salesCoordinatorId <= 0) {
+        return false;
+    }
+
+    $stmt = $conn->prepare('
+        SELECT um.id
+        FROM user_master um
+        INNER JOIN roles r
+            ON r.id = um.role
+           AND r.deleted_at IS NULL
+           AND r.status = \'active\'
+           AND LOWER(TRIM(r.role_name)) = LOWER(TRIM(:role_name))
+        WHERE um.id = :id
+          AND um.deleted_at IS NULL
+        LIMIT 1
+    ');
+    $stmt->bindValue(':id', $salesCoordinatorId, PDO::PARAM_INT);
+    $stmt->bindValue(':role_name', user_sales_coordinator_role_name());
+    $stmt->execute();
+
+    return (bool) $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+function user_normalized_sales_coordinator_id(array $data): ?int
+{
+    if (!user_role_requires_sales_coordinator((int) $data['role'])) {
+        return null;
+    }
+
+    $salesCoordinatorId = (int) ($data['sales_coordinator_id'] ?? 0);
+
+    return $salesCoordinatorId > 0 ? $salesCoordinatorId : null;
+}
 
 /**
  * Legacy role map used only for seeding/syncing roles with user_master.role values.
@@ -102,6 +319,7 @@ function user_from_post(array $post): array
         'email' => trim((string) ($post['email'] ?? '')),
         'password' => (string) ($post['password'] ?? ''),
         'mobile_number' => trim((string) ($post['mobile_number'] ?? '')),
+        'sales_coordinator_id' => trim((string) ($post['sales_coordinator_id'] ?? '')),
     ];
 }
 
@@ -149,6 +367,16 @@ function user_validate(array $data, bool $isEdit, PDO $conn): ?string
         $passwordError = password_reset_rules_error($data['password']);
         if ($passwordError !== null) {
             return $passwordError;
+        }
+    }
+
+    if (user_role_requires_sales_coordinator((int) $data['role'])) {
+        $salesCoordinatorId = (int) ($data['sales_coordinator_id'] ?? 0);
+        if ($salesCoordinatorId <= 0) {
+            return 'Sales Coordinator is required.';
+        }
+        if (!user_is_valid_sales_coordinator($conn, $salesCoordinatorId)) {
+            return 'Selected Sales Coordinator is invalid.';
         }
     }
 
@@ -268,10 +496,10 @@ function user_entry_actions(int $id): string
                 class="btn btn-sm btn-outline-dark" title="View">
                 <i class="bi bi-eye"></i>
             </a>
-            <button type="button" class="btn btn-sm btn-outline-dark edit-user-btn"
-                data-id="' . $id . '" title="Edit">
+            <a href="user_edit.php?id=' . htmlspecialchars($encodedId, ENT_QUOTES, 'UTF-8') . '"
+                class="btn btn-sm btn-outline-dark" title="Edit">
                 <i class="bi bi-pencil"></i>
-            </button>
+            </a>
             <a href="delete_user.php?id=' . htmlspecialchars($encodedId, ENT_QUOTES, 'UTF-8') . '"
                 class="btn btn-sm btn-outline-dark"
                 onclick="return confirm(\'Delete this user?\');" title="Delete">
@@ -281,13 +509,23 @@ function user_entry_actions(int $id): string
     ';
 }
 
+function user_bind_sales_coordinator_id(PDOStatement $stmt, array $data): void
+{
+    $salesCoordinatorId = user_normalized_sales_coordinator_id($data);
+    if ($salesCoordinatorId === null) {
+        $stmt->bindValue(':sales_coordinator_id', null, PDO::PARAM_NULL);
+    } else {
+        $stmt->bindValue(':sales_coordinator_id', $salesCoordinatorId, PDO::PARAM_INT);
+    }
+}
+
 function user_insert(PDO $conn, array $data, string $createdBy): void
 {
     $stmt = $conn->prepare('
         INSERT INTO user_master (
-            role, username, name, email, password, mobile_number, created_by, created_at
+            role, username, name, email, password, mobile_number, sales_coordinator_id, created_by, created_at
         ) VALUES (
-            :role, :username, :name, :email, :password, :mobile_number, :created_by, CURRENT_TIMESTAMP
+            :role, :username, :name, :email, :password, :mobile_number, :sales_coordinator_id, :created_by, CURRENT_TIMESTAMP
         )
     ');
     $stmt->bindValue(':role', (int) $data['role'], PDO::PARAM_INT);
@@ -296,6 +534,7 @@ function user_insert(PDO $conn, array $data, string $createdBy): void
     $stmt->bindValue(':email', $data['email']);
     $stmt->bindValue(':password', user_password_hash($data['password']));
     $stmt->bindValue(':mobile_number', $data['mobile_number']);
+    user_bind_sales_coordinator_id($stmt, $data);
     $stmt->bindValue(':created_by', $createdBy);
     $stmt->execute();
 }
@@ -311,6 +550,7 @@ function user_update(PDO $conn, int $id, array $data): void
                 email = :email,
                 password = :password,
                 mobile_number = :mobile_number,
+                sales_coordinator_id = :sales_coordinator_id,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = :id
               AND deleted_at IS NULL
@@ -324,6 +564,7 @@ function user_update(PDO $conn, int $id, array $data): void
                 name = :name,
                 email = :email,
                 mobile_number = :mobile_number,
+                sales_coordinator_id = :sales_coordinator_id,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = :id
               AND deleted_at IS NULL
@@ -335,6 +576,7 @@ function user_update(PDO $conn, int $id, array $data): void
     $stmt->bindValue(':name', $data['name']);
     $stmt->bindValue(':email', $data['email']);
     $stmt->bindValue(':mobile_number', $data['mobile_number']);
+    user_bind_sales_coordinator_id($stmt, $data);
     $stmt->bindValue(':id', $id, PDO::PARAM_INT);
     $stmt->execute();
 }

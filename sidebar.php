@@ -44,6 +44,8 @@
         $pageName = "User Management";
     } else if ($currentPage == 'user_details.php') {
         $pageName = "User Details";
+    } else if ($currentPage == 'user_edit.php') {
+        $pageName = "Edit User";
     } else if ($currentPage == 'roles.php') {
         $pageName = "Role Management";
     } else if ($currentPage == 'role_details.php') {
@@ -275,7 +277,7 @@
         <div class="menu-heading">ADMINISTRATION</div>
 
         <a href="users.php"
-           class="menu-item <?= ($currentPage == 'users.php' || $currentPage == 'user_details.php') ? 'active' : '' ?>">
+           class="menu-item <?= ($currentPage == 'users.php' || $currentPage == 'user_details.php' || $currentPage == 'user_edit.php') ? 'active' : '' ?>">
             <i class="bi bi-people"></i>
             Users
         </a>

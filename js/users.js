@@ -1,3 +1,41 @@
+function getRolesRequiringSalesCoordinator() {
+    return Array.isArray(window.USER_ROLES_REQUIRING_SALES_COORDINATOR)
+        ? window.USER_ROLES_REQUIRING_SALES_COORDINATOR.map(function (roleId) {
+            return parseInt(roleId, 10);
+        })
+        : [];
+}
+
+function roleRequiresSalesCoordinator(roleId) {
+    const role = parseInt(roleId, 10);
+    return getRolesRequiringSalesCoordinator().indexOf(role) !== -1;
+}
+
+function toggleSalesCoordinatorField(roleId, selectedSalesCoordinatorId) {
+    const wrap = document.getElementById('salesCoordinatorFieldWrap');
+    const select = document.getElementById('salesCoordinatorSelect');
+    if (!wrap || !select) {
+        return;
+    }
+
+    const isRequired = roleRequiresSalesCoordinator(roleId);
+    wrap.style.display = isRequired ? '' : 'none';
+
+    if (!isRequired) {
+        select.value = '';
+        select.classList.remove('is-invalid');
+        const msg = document.querySelector('.validation-msg[data-field="sales_coordinator_id"]');
+        if (msg) {
+            msg.textContent = '';
+        }
+        return;
+    }
+
+    if (selectedSalesCoordinatorId !== undefined && selectedSalesCoordinatorId !== null && String(selectedSalesCoordinatorId) !== '') {
+        select.value = String(selectedSalesCoordinatorId);
+    }
+}
+
 function userPasswordStrengthError(password) {
     if (!password || password.length < 8) {
         return 'Password must be at least 8 characters long.';
@@ -47,6 +85,16 @@ function initUsersFormValidation() {
         return null;
     };
 
+    validate.validators.userSalesCoordinatorRequired = function (value, options, key, attributes) {
+        if (!roleRequiresSalesCoordinator(attributes.role)) {
+            return null;
+        }
+        if (!value || String(value).trim() === '') {
+            return '^Sales Coordinator is required';
+        }
+        return null;
+    };
+
     const constraints = {
         role: {
             presence: { allowEmpty: false, message: '^Role is required' }
@@ -70,6 +118,9 @@ function initUsersFormValidation() {
         password: {
             presence: { allowEmpty: false, message: '^Password is required' },
             userPasswordStrength: true
+        },
+        sales_coordinator_id: {
+            userSalesCoordinatorRequired: true
         }
     };
 
@@ -230,6 +281,7 @@ function fillUserForm(record) {
         : '<i class="bi bi-check-lg"></i> Save User';
 
     form.querySelector('[name="role"]').value = record.role || '';
+    toggleSalesCoordinatorField(record.role, record.sales_coordinator_id || '');
     form.querySelector('[name="username"]').value = record.username || '';
     form.querySelector('[name="name"]').value = record.name || '';
     form.querySelector('[name="email"]').value = record.email || '';
@@ -255,6 +307,7 @@ function resetUserForm() {
     }
     form.reset();
     document.getElementById('userRecordId').value = '';
+    toggleSalesCoordinatorField('');
     document.getElementById('userFormModeLabel').textContent = 'Add User';
     document.getElementById('submitUserBtn').innerHTML = '<i class="bi bi-check-lg"></i> Save User';
     const passwordHint = document.getElementById('userPasswordHint');
@@ -307,9 +360,40 @@ function closeUserFormPanel() {
     resetUserForm();
 }
 
+function bootUserEditPage() {
+    const roleSelect = document.getElementById('userRoleSelect');
+    if (roleSelect) {
+        roleSelect.addEventListener('change', function () {
+            toggleSalesCoordinatorField(roleSelect.value);
+        });
+        toggleSalesCoordinatorField(roleSelect.value, document.getElementById('salesCoordinatorSelect')?.value || '');
+    }
+
+    const cancelBtn = document.getElementById('cancelUserForm');
+    const cancelUrl = window.USER_FORM_CANCEL_URL || 'users.php';
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function () {
+            window.location.href = cancelUrl;
+        });
+    }
+}
+
 function bootUsersPage() {
     initUsersFormValidation();
+
+    if (window.USER_FORM_PAGE === 'edit') {
+        bootUserEditPage();
+        return;
+    }
+
     initUsersDatatable();
+
+    const roleSelect = document.getElementById('userRoleSelect');
+    if (roleSelect) {
+        roleSelect.addEventListener('change', function () {
+            toggleSalesCoordinatorField(roleSelect.value);
+        });
+    }
 
     document.addEventListener('click', function (e) {
         const editBtn = e.target.closest('.edit-user-btn');

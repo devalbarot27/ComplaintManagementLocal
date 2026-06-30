@@ -9,6 +9,7 @@ function rbac_admin_pages(): array
     return [
         'users.php',
         'user_details.php',
+        'user_edit.php',
         'delete_user.php',
         'roles.php',
         'role_details.php',

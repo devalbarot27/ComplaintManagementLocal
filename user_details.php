@@ -23,6 +23,13 @@ if (!$record) {
 $roleLabel = user_role_label($obconn, $record['role']);
 $displayName = user_display_value($record['name']);
 $pageTitle = $displayName !== '-' ? $displayName : user_display_value($record['username']);
+$showSalesCoordinator = user_role_requires_sales_coordinator((int) $record['role'])
+    || !empty($record['sales_coordinator_id']);
+$salesCoordinatorLabel = user_sales_coordinator_display_name(
+    $obconn,
+    isset($record['sales_coordinator_id']) ? (int) $record['sales_coordinator_id'] : null
+);
+$encodedId = base64_encode((string) $record['id']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -45,6 +52,12 @@ $pageTitle = $displayName !== '-' ? $displayName : user_display_value($record['u
         <?php include 'sidebar.php'; ?>
 
         <div class="content">
+            <?php if (isset($_SESSION['success_message'])) { ?>
+            <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+                <?php echo htmlspecialchars($_SESSION['success_message']); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <?php unset($_SESSION['success_message']); } ?>
             <?php
             record_details_page_header(
                 'User Details',
@@ -57,7 +70,9 @@ $pageTitle = $displayName !== '-' ? $displayName : user_display_value($record['u
                     '<span class="record-details-chip">' . record_details_escape($roleLabel) . '</span>',
                 ]
             );
-
+            ?>
+            
+            <?php
             record_details_card_start();
 
             record_details_section_start(1, 'Account Information', 'Login credentials and profile details');
@@ -66,6 +81,9 @@ $pageTitle = $displayName !== '-' ? $displayName : user_display_value($record['u
             record_details_field('Name', user_display_value($record['name']));
             record_details_field('Email', user_display_value($record['email']));
             record_details_field('Mobile Number', user_display_value($record['mobile_number']));
+            if ($showSalesCoordinator) {
+                record_details_field('Sales Coordinator', $salesCoordinatorLabel);
+            }
             record_details_field('Created By', user_display_value($record['created_by']));
             record_details_section_end();
 

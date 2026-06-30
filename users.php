@@ -13,6 +13,16 @@ $error_message = '';
 
 
 $roleOptions = user_role_options($obconn);
+$salesCoordinatorOptions = user_sales_coordinator_options_for_form($obconn);
+$formRecord = [
+    'id' => 0,
+    'role' => 0,
+    'username' => '',
+    'name' => '',
+    'email' => '',
+    'mobile_number' => '',
+    'sales_coordinator_id' => 0,
+];
 $createdBy = current_username();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_user'])) {
@@ -137,71 +147,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_user'])) {
                                     <p class="complaint-form-section__hint">Role, identity, and contact information</p>
                                 </div>
                             </div>
-                            <div class="row g-3">
-                                <div class="col-md-6 form-group">
-                                    <label class="form-label" for="userRoleSelect">
-                                        <i class="bi bi-person-badge"></i> Role <span class="text-danger">*</span>
-                                    </label>
-                                    <select class="form-control" name="role" id="userRoleSelect">
-                                        <option value="">Select role</option>
-                                        <?php foreach ($roleOptions as $roleId => $roleLabel) { ?>
-                                        <option value="<?php echo (int) $roleId; ?>">
-                                            <?php echo htmlspecialchars($roleLabel); ?>
-                                        </option>
-                                        <?php } ?>
-                                    </select>
-                                    <div class="text-danger validation-msg" data-field="role"></div>
-                                </div>
-                                <div class="col-md-6 form-group">
-                                    <label class="form-label">
-                                        <i class="bi bi-person"></i> Username <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="text" class="form-control" name="username" maxlength="100"
-                                        placeholder="Unique login username" autocomplete="off">
-                                    <div class="text-danger validation-msg" data-field="username"></div>
-                                </div>
-                                <div class="col-md-6 form-group">
-                                    <label class="form-label">
-                                        <i class="bi bi-card-text"></i> Name <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="text" class="form-control" name="name" maxlength="255"
-                                        placeholder="Full name">
-                                    <div class="text-danger validation-msg" data-field="name"></div>
-                                </div>
-                                <div class="col-md-6 form-group">
-                                    <label class="form-label">
-                                        <i class="bi bi-envelope"></i> Email <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="email" class="form-control" name="email" maxlength="255"
-                                        placeholder="user@example.com" autocomplete="off">
-                                    <div class="text-danger validation-msg" data-field="email"></div>
-                                </div>
-                                <div class="col-md-6 form-group">
-                                    <label class="form-label">
-                                        <i class="bi bi-phone"></i> Mobile Number <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="text" class="form-control" name="mobile_number" maxlength="10"
-                                        placeholder="10-digit mobile number">
-                                    <div class="text-danger validation-msg" data-field="mobile_number"></div>
-                                </div>
-                                <div class="col-md-6 form-group">
-                                    <label class="form-label">
-                                        <i class="bi bi-key"></i> Password <span class="text-danger" id="userPasswordRequired">*</span>
-                                    </label>
-                                    <div class="input-group">
-                                        <input type="password" class="form-control" name="password" id="userPasswordInput"
-                                            placeholder="Enter password" autocomplete="new-password">
-                                        <button class="btn btn-outline-secondary" type="button"
-                                            data-toggle-password="userPasswordInput" tabindex="-1">
-                                            <i class="bi bi-eye-slash"></i>
-                                        </button>
-                                    </div>
-                                    <small class="text-muted d-block mt-1" id="userPasswordHint">
-                                        Minimum 8 characters with digit, uppercase, lowercase, and special character.
-                                    </small>
-                                    <div class="text-danger validation-msg" data-field="password"></div>
-                                </div>
-                            </div>
+                            <?php include 'includes/user_form_fields.php'; ?>
                         </section>
                     </div>
                     <div class="complaint-form-actions">
@@ -241,6 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_user'])) {
 
     <script src="js/users.js"></script>
     <script>
+    window.USER_ROLES_REQUIRING_SALES_COORDINATOR = <?php echo json_encode(user_roles_requiring_sales_coordinator()); ?>;
     $(document).ready(function () {
         document.getElementById('cancelUserForm').addEventListener('click', closeUserFormPanel);
         document.getElementById('closeUserForm').addEventListener('click', closeUserFormPanel);
