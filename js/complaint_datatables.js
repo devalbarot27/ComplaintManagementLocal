@@ -11,7 +11,7 @@ function initComplaintEntryDatatable() {
             url: 'api/complaints_datatable.php',
             type: 'POST'
         },
-        order: [[0, 'desc']],
+        order: [[5, 'desc']],
         pageLength: 10,
         lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
         columns: [

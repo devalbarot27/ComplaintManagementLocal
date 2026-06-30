@@ -49,7 +49,7 @@ function complaint_status_badge(int $status): string
 }
 
 /**
- * Complaint Entry visibility: System Admin sees all; others see own or assigned records.
+ * Complaint Entry visibility: System Admin, Management, and CCS Admin see all; others see own or assigned records.
  *
  * @return array{where: string, params: array<string, mixed>}
  */
@@ -59,19 +59,10 @@ function complaint_entry_list_scope(PDO $conn): array
         admin_refresh_session_role($conn);
     }
 
-    if (is_system_admin() || is_management_user()) {
+    if (is_system_admin() || is_management_user() || is_ccs_admin_user()) {
         return [
             'where' => 'deleted_at IS NULL',
             'params' => [],
-        ];
-    }
-    
-    if (is_ccs_admin_user()) {
-        return [
-            'where' => 'status = :status AND deleted_at IS NULL',
-            'params' => [
-                ':status' => COMPLAINT_STATUS_PENDING_HO,
-            ],
         ];
     }
 

@@ -19,7 +19,7 @@ $allowedOrderColumns = [
     'created_at',
 ];
  
-$req = dt_parse_request($allowedOrderColumns, 'id');
+$req = dt_parse_request($allowedOrderColumns, 'created_at');
 
 $listScope = complaint_entry_list_scope($obconn);
 $baseWhere = $listScope['where'];
@@ -61,6 +61,7 @@ $recordsFiltered = (int) $countFilteredStmt->fetch(PDO::FETCH_ASSOC)['total'];
  
 $orderColumn = $req['orderColumn'];
 $orderDir = $req['orderDir'];
+$orderSql = complaint_entry_datatable_order_sql($obconn, $orderColumn, $orderDir);
  
 $dataQuery = "
     SELECT
@@ -119,7 +120,7 @@ $dataQuery = "
         ) AS has_service_after_closure_no
     FROM complaints
     WHERE {$filterWhere}
-    ORDER BY {$orderColumn} {$orderDir}
+    ORDER BY {$orderSql}
     LIMIT :limit OFFSET :offset
 ";
  

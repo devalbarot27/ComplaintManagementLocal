@@ -30,7 +30,7 @@ if (!isset($_SESSION['role'])) {
     admin_refresh_session_role($obconn);
 }
 
-if (is_system_admin() || is_management_user()) {
+if (is_system_admin() || is_management_user() || is_ccs_admin_user()) {
     $sql = '
         SELECT
             customer_name,

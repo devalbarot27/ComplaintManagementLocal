@@ -143,6 +143,28 @@ function dt_parse_closure_row_flags(array $row): array
     ];
 }
 
+function complaint_entry_datatable_order_sql(PDO $conn, string $orderColumn, string $orderDir): string
+{
+    admin_ensure_session_role($conn);
+
+    $orderDir = strtoupper($orderDir) === 'ASC' ? 'ASC' : 'DESC';
+    $pendingHoFirst = 'CASE WHEN status = ' . COMPLAINT_STATUS_PENDING_HO . ' THEN 0 ELSE 1 END ASC';
+
+    if (is_ccs_admin_user()) {
+        if ($orderColumn === 'created_at' || $orderColumn === 'id') {
+            return $pendingHoFirst . ', created_at DESC';
+        }
+
+        return $pendingHoFirst . ", {$orderColumn} {$orderDir}, created_at DESC";
+    }
+
+    if ($orderColumn === 'id') {
+        $orderColumn = 'created_at';
+    }
+
+    return "{$orderColumn} {$orderDir}";
+}
+
 function complaint_user_can_closure(PDO $conn): bool
 {
     return is_ccs_admin_user()
