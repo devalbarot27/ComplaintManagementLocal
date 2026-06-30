@@ -288,6 +288,7 @@
             Roles
         </a>
 
+        <?php /* 
         <a href="modules.php"
            class="menu-item <?= ($currentPage == 'modules.php' || $currentPage == 'module_details.php') ? 'active' : '' ?>">
             <i class="bi bi-grid-3x3-gap"></i>
@@ -299,6 +300,7 @@
             <i class="bi bi-key"></i>
             Permissions
         </a>
+        */ ?>
 
         <a href="assign_permissions.php"
            class="menu-item <?= ($currentPage == 'assign_permissions.php') ? 'active' : '' ?>">
