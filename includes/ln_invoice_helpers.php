@@ -62,10 +62,19 @@ function ln_invoice_get_invoice_date_by_fabno(PDO $conn, string $fabno): ?string
         return null;
     }
 
+    /*
     $stmt = $conn->prepare('
         SELECT MAX(inv_dt) AS inv_dt
         FROM ln_invoice_details
         WHERE fabno = :fabno
+    ');
+    */
+    $stmt = $conn->prepare('
+        SELECT MAX(inv_dt) AS inv_dt
+        FROM ln_invoice_details
+        WHERE fabno = :fabno
+        Order by inv_dt desc
+        Limit 1
     ');
     $stmt->bindValue(':fabno', $fabno);
     $stmt->execute();

@@ -280,21 +280,19 @@ $monthlyChartMax = max(4, (int) (ceil($monthlyChartMax / 4) * 4));
                 <div class="pipeline-label">Created</div>
             </div>
 
-            <div class="arrow">?</div>
+            
 
             <div class="pipeline-step">
                 <div class="pipeline-count purple"><?php echo htmlspecialchars((string) $acknowledgementCount); ?></div>
                 <div class="pipeline-label">Acknowledged</div>
             </div>
 
-            <div class="arrow">?</div>
+           
 
             <div class="pipeline-step">
                 <div class="pipeline-count orange"><?php echo htmlspecialchars((string) $pendingOrdersCount); ?></div>
                 <div class="pipeline-label">Pending</div>
             </div>
-
-            <div class="arrow">?</div>
 
             <div class="pipeline-step">
                 <div class="pipeline-count green"><?php echo htmlspecialchars((string) $dispatched_orders_count); ?></div>
