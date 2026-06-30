@@ -4,11 +4,18 @@ session_start();
 include 'pdo_obconn.php';
 require_once 'includes/rbac_page_guard.php';
 include 'includes/complaint_activity_helpers.php';
+require_once 'includes/complaint_status.php';
  
 $id = (int)base64_decode($_GET['id'] ?? '', true);
  
 if ($id <= 0) {
     $_SESSION['error_message'] = 'Invalid complaint.';
+    header('Location: new_complaint.php');
+    exit;
+}
+
+if (!complaint_user_can_access_entry_complaint($obconn, $id)) {
+    $_SESSION['error_message'] = 'Access denied. You do not have permission to delete this complaint.';
     header('Location: new_complaint.php');
     exit;
 }

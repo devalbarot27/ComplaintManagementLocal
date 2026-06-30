@@ -52,6 +52,11 @@ if ($from === 'list') {
     $back_url = 'dse_lse_complaint_list.php';
     $back_label = 'Back to Assigned List';
 } else {
+    if (!complaint_user_can_access_entry_complaint($obconn, $id)) {
+        $_SESSION['error_message'] = 'Access denied. You do not have permission to view this complaint.';
+        header('Location: new_complaint.php');
+        exit;
+    }
     $active_menu = 'complaint_entry';
     $back_url = 'new_complaint.php';
     $back_label = 'Back to Complaint Entry';

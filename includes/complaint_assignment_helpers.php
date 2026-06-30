@@ -4,6 +4,7 @@ require_once __DIR__ . '/user_helpers.php';
 require_once __DIR__ . '/current_username_helpers.php';
 require_once __DIR__ . '/admin_access_helpers.php';
 require_once __DIR__ . '/complaint_status.php';
+require_once __DIR__ . '/sales_coordinator_access_helpers.php';
 
 function complaint_elgi_engineer_role_id(): int
 {
@@ -172,6 +173,21 @@ function complaint_assigned_list_scope(PDO $conn): array
         return [
             'where' => $where,
             'params' => $params,
+        ];
+    }
+
+    if (is_sales_coordinator_user()) {
+        $scopeParams = sales_coordinator_scope_params($conn);
+        if ($scopeParams === []) {
+            return [
+                'where' => $where . ' AND 1 = 0',
+                'params' => $params,
+            ];
+        }
+
+        return [
+            'where' => $where . ' AND ' . sales_coordinator_complaint_assigned_extra_where(),
+            'params' => array_merge($params, $scopeParams),
         ];
     }
 

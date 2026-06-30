@@ -36,6 +36,12 @@ if (($assigneeError = complaint_validate_elgi_engineer_assignee($obconn, $assign
     header('Location: ' . $redirect);
     exit;
 }
+
+if (!complaint_user_can_access_entry_complaint($obconn, $complaint_id)) {
+    $_SESSION['error_message'] = 'Access denied. You do not have permission to assign this complaint.';
+    header('Location: ' . $redirect);
+    exit;
+}
  
 $assigned_by = current_user_id($obconn);
 if ($assigned_by === null || $assigned_by <= 0) {

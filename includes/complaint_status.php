@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/admin_access_helpers.php';
 require_once __DIR__ . '/current_username_helpers.php';
+require_once __DIR__ . '/sales_coordinator_access_helpers.php';
 
 /** Complaint status IDs */
 const COMPLAINT_STATUS_OPEN = 1;
@@ -72,6 +73,10 @@ function complaint_entry_list_scope(PDO $conn): array
                 ':status' => COMPLAINT_STATUS_PENDING_HO,
             ],
         ];
+    }
+
+    if (is_sales_coordinator_user()) {
+        return sales_coordinator_complaint_entry_list_scope($conn);
     }
 
     $username = current_username();

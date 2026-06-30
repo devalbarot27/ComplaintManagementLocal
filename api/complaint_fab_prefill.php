@@ -3,6 +3,8 @@ session_start();
 require_once dirname(__DIR__) . '/pdo_obconn.php';
 require_once dirname(__DIR__) . '/includes/rbac_access_helpers.php';
 require_once dirname(__DIR__) . '/includes/current_username_helpers.php';
+require_once dirname(__DIR__) . '/includes/admin_access_helpers.php';
+require_once dirname(__DIR__) . '/includes/complaint_status.php';
 
 rbac_require_api_access($obconn);
 
@@ -24,40 +26,46 @@ if ($username === '' && ($userId === null || $userId <= 0)) {
     exit;
 }
 
-$userConditions = [];
-$params = [':fab_number' => $fabNumber];
-
-if ($username !== '') {
-    $userConditions[] = 'TRIM(username) = :username';
-    $params[':username'] = $username;
+if (!isset($_SESSION['role'])) {
+    admin_refresh_session_role($obconn);
 }
 
-if ($userId !== null && $userId > 0) {
-    $userConditions[] = 'added_by = :user_id';
-    $params[':user_id'] = $userId;
+if (is_system_admin() || is_management_user()) {
+    $sql = '
+        SELECT
+            customer_name,
+            street_1,
+            street_2,
+            pincode,
+            city,
+            district,
+            state
+        FROM complaints
+        WHERE fab_number = :fab_number
+          AND deleted_at IS NULL
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+    ';
+    $params = [':fab_number' => $fabNumber];
+} else {
+    $scope = complaint_entry_list_scope($obconn);
+    $sql = '
+        SELECT
+            customer_name,
+            street_1,
+            street_2,
+            pincode,
+            city,
+            district,
+            state
+        FROM complaints
+        WHERE fab_number = :fab_number
+          AND ' . $scope['where'] . '
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+    ';
+    $params = array_merge([':fab_number' => $fabNumber], $scope['params']);
 }
-
-if ($userConditions === []) {
-    echo json_encode(['found' => false]);
-    exit;
-}
-
-$sql = '
-    SELECT
-        customer_name,
-        street_1,
-        street_2,
-        pincode,
-        city,
-        district,
-        state
-    FROM complaints
-    WHERE fab_number = :fab_number
-      AND deleted_at IS NULL
-      AND (' . implode(' OR ', $userConditions) . ')
-    ORDER BY created_at DESC, id DESC
-    LIMIT 1
-';
 
 $stmt = $obconn->prepare($sql);
 
@@ -65,7 +73,7 @@ foreach ($params as $key => $value) {
     $stmt->bindValue(
         $key,
         $value,
-        $key === ':user_id' ? PDO::PARAM_INT : PDO::PARAM_STR
+        is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR
     );
 }
 

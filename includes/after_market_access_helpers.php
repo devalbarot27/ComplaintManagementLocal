@@ -4,6 +4,7 @@ require_once __DIR__ . '/admin_access_helpers.php';
 require_once __DIR__ . '/current_username_helpers.php';
 require_once __DIR__ . '/rbac_access_helpers.php';
 require_once __DIR__ . '/installed_base_helpers.php';
+require_once __DIR__ . '/sales_coordinator_access_helpers.php';
 
 /**
  * List scope for after-market modules (installed base, service log, spare parts).
@@ -24,6 +25,10 @@ function after_market_list_scope(PDO $conn): array
         ];
     }
 
+    if (is_sales_coordinator_user()) {
+        return sales_coordinator_after_market_list_scope($conn);
+    }
+
     return [
         'where' => 'deleted_at IS NULL AND username = :username',
         'params' => [
@@ -37,8 +42,10 @@ function after_market_list_scope(PDO $conn): array
  */
 function after_market_scope_where_for_alias(string $where, string $tableAlias): string
 {
-    $where = str_replace('deleted_at', $tableAlias . '.deleted_at', $where);
-    $where = str_replace('username =', $tableAlias . '.username =', $where);
+    // Qualify only bare outer-table columns; leave subquery aliases (e.g. um_sc.deleted_at) unchanged.
+    $where = preg_replace('/(?<![.\w])deleted_at\b/', $tableAlias . '.deleted_at', $where);
+    $where = preg_replace('/\bTRIM\(username\)/', 'TRIM(' . $tableAlias . '.username)', $where);
+    $where = preg_replace('/(?<![.\w])username\s*=/', $tableAlias . '.username =', $where);
 
     return $where;
 }
