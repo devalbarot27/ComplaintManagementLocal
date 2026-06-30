@@ -48,6 +48,7 @@ function dashboard_fetch_pending_orders_count(PDO $conn, string $userName, strin
     $dateFilter = dashboard_period_date_sql('p.orddt', $period);
 
     try {
+    
         $stmt = $conn->prepare("
             SELECT COUNT(*) AS cnt
             FROM pendingordersnew p, user_area_dpst_mapping u
@@ -57,8 +58,24 @@ function dashboard_fetch_pending_orders_count(PDO $conn, string $userName, strin
               AND u.valid = 'Y'
               AND $dateFilter
         ");
-        $stmt->bindValue(':uname', $userName);
-        $stmt->execute();
+        
+$stmt_new = $conn->prepare("
+    SELECT COUNT(*) AS cnt
+    FROM pendingordersnew p
+    LEFT OUTER JOIN dpst_master dm 
+        ON TRIM(p.dpst) = dm.dpst_code::text
+    LEFT JOIN tbl_commitment tc 
+        ON p.ordno = tc.orderno 
+        AND p.posno = tc.posno
+    WHERE p.company != 600
+      AND p.cuno = :uname
+      AND $dateFilter
+");
+
+$stmt->bindValue(':uname', $userName);
+$stmt->execute();
+        
+
 
         return (int) $stmt->fetchColumn();
     } catch (Throwable $e) {
@@ -107,6 +124,28 @@ function dashboard_fetch_acknowledgement_count(PDO $conn, string $userName, stri
               AND u.valid = 'Y'
               AND $dateFilter
         ");
+
+
+        $stmt_new = $conn->prepare("
+    SELECT COUNT(*) AS cnt
+    FROM (
+        SELECT DISTINCT 
+            m.cuno,
+            m.ordno,
+            m.ord_date,
+            m.purno,
+            m.dpst,
+            d.dpst_desc
+        FROM maintdealer m
+        LEFT OUTER JOIN dpst_master d 
+            ON TRIM(m.dpst) = d.dpst_code::text
+        WHERE m.company != 600
+          AND m.cuno = :uname
+          AND $dateFilter
+    ) x
+");
+
+
         $stmt->bindValue(':uname', $userName);
         $stmt->execute();
 

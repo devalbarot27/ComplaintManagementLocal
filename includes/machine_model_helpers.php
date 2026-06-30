@@ -2,6 +2,7 @@
 
 function machine_model_search_product_master(PDO $conn, string $term, string $dpst, int $limit = 25): array
 {
+    /*
     $stmt = $conn->prepare("
         SELECT tplcode, tpldesc
         FROM product_master
@@ -17,6 +18,20 @@ function machine_model_search_product_master(PDO $conn, string $term, string $dp
     $stmt->bindValue(':dpst', $dpst);
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt->execute();
+    */
+    $stmt = $conn->prepare("
+    SELECT tplcode, tpldesc
+    FROM product_master
+    WHERE (
+            tplcode ILIKE :term
+         OR tpldesc ILIKE :term
+      )
+    ORDER BY tplcode
+    LIMIT :limit
+");
+$stmt->bindValue(':term', '%' . $term . '%');
+$stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+$stmt->execute();
 
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }

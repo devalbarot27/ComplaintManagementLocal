@@ -31,7 +31,7 @@ $selectedPeriod = $dashboardStats['selected_period'];
 $selectedPeriodLabel = $dashboardStats['selected_period_label'];
 $periodOptions = $dashboardStats['period_options'];
 
-$totalOrdersCount = $dashboardStats['total_orders_count'];
+
 $totalCreatedOrdersCount = $dashboardStats['total_orders_count'];
 $pendingOrdersCount = $dashboardStats['pending_orders_count'];
 $acknowledgementCount = $dashboardStats['acknowledgement_count'];
@@ -41,6 +41,8 @@ $dispatched_orders_count = $dashboardStats['dispatched_orders_count'];
 $dispatchesDeliveredThisWeekAlert = dashboard_format_dispatches_delivered_this_week_alert(
     $dashboardStats['dispatches_delivered_this_week_count']
 );
+//$totalOrdersCount = $dashboardStats['total_orders_count'];
+$totalOrdersCount = $totalCreatedOrdersCount + $acknowledgementCount + $pendingOrdersCount + $dispatched_orders_count;
 
 $monthlyChartData = $dashboardStats['monthly_chart'];
 $monthlyChartMax = max(
@@ -397,13 +399,14 @@ $monthlyChartMax = max(4, (int) (ceil($monthlyChartMax / 4) * 4));
  <table id="orderTable" class="table table-hover align-middle w-100 recent-table">
                                     <thead>
                                         <tr>
-                                            <th>Order No</th>
-                                            <th>Order Category</th>
-                                            <th>Address</th>
+                                            <th>Ref No</th>
+                                            <th>Category</th>
                                             <th>Delivery Term</th>
+                                            <th>PO Number</th>
                                             <th>Payment Term</th>
                                             <th>Transporter</th>
                                             <th>Lines</th>
+                                            <th>Order Status</th>
                                         </tr>
                                     </thead>
                                 </table>
@@ -939,30 +942,19 @@ searching: false,
             },
 
             columns: [
-                 {
-        		data: 'order_no',
-        		render: function (data, type, row) {
-            			return '<span class="order-no">' + data + '</span>';
-        		}
-    		},                
-		{
-                    data: 'order_category'
-                },
                 {
-                    data: 'dealer_address'
+                    data: 'ref_no',
+                    render: function (data) {
+                        return '<span class="order-no">' + data + '</span>';
+                    }
                 },
-                {
-                    data: 'delivery_term'
-                },
-                {
-                    data: 'payment_term'
-                },
-                {
-                    data: 'transporter'
-                },
-                {
-                    data: 'lines'
-                },
+                { data: 'category' },
+                { data: 'delivery_term' },
+                { data: 'po_number' },
+                { data: 'payment_term' },
+                { data: 'transporter' },
+                { data: 'lines' },
+                { data: 'order_status' },
             ]
         });
 

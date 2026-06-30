@@ -72,12 +72,13 @@ $refNo = trim((string) ($_GET['order_no'] ?? ''));
                                     <thead>
                                         <tr>
                                             <th>Ref No</th>
-                                            <th>Order Category</th>
-                                            <th>Address</th>
+                                            <th>Category</th>
                                             <th>Delivery Term</th>
+                                            <th>PO Number</th>
                                             <th>Payment Term</th>
                                             <th>Transporter</th>
                                             <th>Lines</th>
+                                            <th>Order Status</th>
                                         </tr>
                                     </thead>
                                 </table>
@@ -134,16 +135,16 @@ $refNo = trim((string) ($_GET['order_no'] ?? ''));
             },
 
             columns: [{
-                    data: 'order_no'
+                    data: 'ref_no'
                 },
                 {
-                    data: 'order_category'
-                },
-                {
-                    data: 'dealer_address'
+                    data: 'category'
                 },
                 {
                     data: 'delivery_term'
+                },
+                {
+                    data: 'po_number'
                 },
                 {
                     data: 'payment_term'
@@ -153,6 +154,9 @@ $refNo = trim((string) ($_GET['order_no'] ?? ''));
                 },
                 {
                     data: 'lines'
+                },
+                {
+                    data: 'order_status'
                 },
             ],
             drawCallback: function() {
