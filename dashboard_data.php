@@ -977,7 +977,7 @@ searching: false,
             type: 'POST',
             data: {
                 orderNo: orderNo,
-                action: "getAcknowledgeLine"
+                action: "getRecentOrderLine"
             },
             dataType: "HTML",
             success: function(res) {
