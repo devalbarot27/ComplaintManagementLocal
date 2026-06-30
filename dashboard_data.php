@@ -14,9 +14,7 @@ if (empty($_SESSION['usr_name'])) {
     exit;
 }
 
-if (!isset($_SESSION['role'])) {
-    admin_refresh_session_role($obconn);
-}
+admin_ensure_session_role($obconn);
 
 if (!rbac_user_can($obconn, $dashboardModule, 'view')) {
     header('Location: access_denied.php');

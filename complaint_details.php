@@ -43,6 +43,9 @@ if (!$complaint) {
 $from = $_GET['from'] ?? 'entry';
 if ($from === 'list') {
     require_once 'includes/complaint_assignment_helpers.php';
+    if (!rbac_user_can($obconn, 'assigned-complaint-list', 'view')) {
+        rbac_access_denied_redirect();
+    }
     if (!complaint_user_can_access_assigned_complaint($obconn, $id)) {
         $_SESSION['error_message'] = 'Access denied. You do not have permission to view this complaint.';
         header('Location: dse_lse_complaint_list.php');

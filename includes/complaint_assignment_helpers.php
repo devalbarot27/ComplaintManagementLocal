@@ -11,6 +11,11 @@ function complaint_elgi_engineer_role_id(): int
     return 3;
     //return 7;
 }
+function complaint_dealer_user_role_id(): int
+{
+    return 1;
+    //return 7;
+}
 
 function complaint_fetch_elgi_engineer_assignees(PDO $conn): array
 {
@@ -21,7 +26,7 @@ function complaint_fetch_elgi_engineer_assignees(PDO $conn): array
           AND deleted_at IS NULL
         ORDER BY name ASC, username ASC
     ');
-    $stmt->bindValue(':role', complaint_elgi_engineer_role_id(), PDO::PARAM_INT);
+    $stmt->bindValue(':role', complaint_dealer_user_role_id(), PDO::PARAM_INT);
     $stmt->execute();
 
     return $stmt->fetchAll(PDO::FETCH_ASSOC);

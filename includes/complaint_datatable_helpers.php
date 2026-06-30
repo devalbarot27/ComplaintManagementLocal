@@ -145,7 +145,17 @@ function dt_parse_closure_row_flags(array $row): array
 
 function complaint_user_can_closure(PDO $conn): bool
 {
-    return is_dealer_user() || is_dealer_engineer_user() || is_elgi_engineer_user() || is_system_admin() || is_ccs_admin_user() && rbac_has_permission($conn, 'complaint-entry', 'complaint-closure');
+    return is_ccs_admin_user()
+        && rbac_user_can($conn, 'complaint-entry', 'complaint-closure');
+}
+
+function complaint_entry_require_closure_permission(PDO $conn, string $redirect = 'new_complaint.php'): void
+{
+    if (!complaint_user_can_closure($conn)) {
+        $_SESSION['error_message'] = 'Access denied. Complaint closure is available to CCS Admin users with the required permission only.';
+        header('Location: ' . $redirect);
+        exit;
+    }
 }
 
 /**
@@ -186,15 +196,19 @@ function complaint_assigned_action_permissions(PDO $conn): array
     ];
 }
 
+function complaint_assigned_require_page_access(PDO $conn): void
+{
+    if (!rbac_user_can($conn, 'assigned-complaint-list', 'view')) {
+        rbac_access_denied_redirect();
+    }
+}
+
 function complaint_assigned_require_permission(
     PDO $conn,
-    string $permissionSlug,
-    string $redirect = 'dse_lse_complaint_list.php'
+    string $permissionSlug
 ): void {
     if (!rbac_user_can($conn, 'assigned-complaint-list', $permissionSlug)) {
-        $_SESSION['error_message'] = 'Access denied. You do not have permission for this action.';
-        header('Location: ' . $redirect);
-        exit;
+        rbac_access_denied_redirect();
     }
 }
 

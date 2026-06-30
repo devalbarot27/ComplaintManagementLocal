@@ -1,6 +1,8 @@
 <?php
 session_start();
 include 'pdo_obconn.php';
+require_once 'includes/admin_access_helpers.php';
+admin_ensure_session_role($obconn);
 include 'includes/complaint_activity_helpers.php';
 require_once 'includes/complaint_assignment_mail_helpers.php';
 require_once 'includes/current_username_helpers.php';
@@ -14,11 +16,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-if (!complaint_user_can_closure($obconn)) {
-    $_SESSION['error_message'] = 'Access denied. Complaint closure is available to Dealer Users only.';
-    header('Location: ' . $redirect);
+if (empty($_SESSION['usr_name'])) {
+    header('Location: login.php');
     exit;
 }
+
+complaint_entry_require_closure_permission($obconn);
  
 $complaint_id = (int) ($_POST['complaint_id'] ?? 0);
 $call_closure = trim($_POST['call_closure'] ?? '');

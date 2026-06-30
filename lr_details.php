@@ -159,22 +159,19 @@ if (!rbac_user_can($obconn, 'lr-details', 'list')) {
                     data: 'ordno'
                 },
                 {
-                    data: 'invno'
+                    data: 'invoice'
                 },
                 {
-                    data: 'invdt'
+                    data: 'invdate'
                 },
                 {
-                    data: 'transporter'
+                    data: 'tname'
                 },
                 {
                     data: 'lrno'
                 },
                 {
-                    data: 'packing'
-                },
-                {
-                    data: 'weight'
+                    data: 'lrdate'
                 },
             ]
         });

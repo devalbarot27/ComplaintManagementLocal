@@ -244,11 +244,9 @@
     <?php } ?>  
 
     <?php
-    // SUPPORT ALWAYS SHOW
     $canComplaintEntry = rbac_can_access_menu($obconn, 'new_complaint.php');
     $canAssignedComplaintList = rbac_can_access_menu($obconn, 'dse_lse_complaint_list.php');
-    $showSupport = $canComplaintEntry
-        || $canAssignedComplaintList;
+    $showSupport = $canComplaintEntry || $canAssignedComplaintList;
     ?>
     <?php if ($canComplaintEntry || $canAssignedComplaintList) { ?>
     <div class="menu-section">

@@ -10,8 +10,7 @@ require_once 'includes/complaint_datatable_helpers.php';
 include 'includes/service_report_helpers.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: dse_lse_complaint_list.php');
-    exit;
+    rbac_access_denied_redirect();
 }
 
 complaint_assigned_require_permission($obconn, 'service-update');

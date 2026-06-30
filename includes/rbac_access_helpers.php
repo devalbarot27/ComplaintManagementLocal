@@ -222,9 +222,7 @@ function rbac_role_has_permission(PDO $conn, string $moduleSlug, string $permiss
         return false;
     }
 
-    if (!isset($_SESSION['role'])) {
-        admin_refresh_session_role($conn);
-    }
+    admin_ensure_session_role($conn);
 
     $roleId = rbac_resolve_role_id($conn);
     if ($roleId <= 0) {
@@ -351,9 +349,7 @@ function rbac_require_api_access(PDO $conn): void
         exit;
     }
 
-    if (!isset($_SESSION['role'])) {
-        admin_refresh_session_role($conn);
-    }
+    admin_ensure_session_role($conn);
 
     $script = basename($_SERVER['PHP_SELF']);
     $rule = rbac_resolve_api_rule($script);

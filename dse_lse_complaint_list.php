@@ -2,11 +2,21 @@
 session_start();
 
 include 'pdo_obconn.php';
+require_once 'includes/admin_access_helpers.php';
 require_once 'includes/rbac_page_guard.php';
 require_once 'includes/complaint_datatable_helpers.php';
 
+if (empty($_SESSION['usr_name'])) {
+    header('Location: login.php');
+    exit;
+}
+
+admin_refresh_session_role($obconn);
+complaint_assigned_require_page_access($obconn);
+
 $active_menu = 'complaint_list';
 $assignedComplaintPermissions = complaint_assigned_action_permissions($obconn);
+$canViewAssignedComplaintList = $assignedComplaintPermissions['view'];
 $canServiceUpdateAssignedComplaint = $assignedComplaintPermissions['service_update'];
 
 ?>

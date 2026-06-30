@@ -29,6 +29,13 @@ function admin_refresh_session_role(PDO $conn): void
     $_SESSION['role'] = $row ? (int) $row['role'] : 0;
 }
 
+function admin_ensure_session_role(PDO $conn): void
+{
+    if (!isset($_SESSION['role']) || current_user_role() <= 0) {
+        admin_refresh_session_role($conn);
+    }
+}
+
 function current_user_role(): int
 {
     return (int) ($_SESSION['role'] ?? 0);
@@ -66,8 +73,8 @@ function is_ccs_admin_user(): bool
 
 function require_system_admin(?PDO $conn = null): void
 {
-    if ($conn !== null && !isset($_SESSION['role'])) {
-        admin_refresh_session_role($conn);
+    if ($conn !== null) {
+        admin_ensure_session_role($conn);
     }
 
     if (!is_system_admin()) {
