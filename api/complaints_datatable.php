@@ -37,7 +37,18 @@ $recordsTotalStmt->execute();
 $recordsTotal = (int) $recordsTotalStmt->fetch(PDO::FETCH_ASSOC)['total'];
  
 $filterWhere = $baseWhere;
- 
+
+$statusFilter = trim((string) ($_POST['status_filter'] ?? ''));
+if ($statusFilter !== '') {
+    $statusFilterInt = (int) $statusFilter;
+    if (!array_key_exists($statusFilterInt, complaint_status_map())) {
+        $statusFilter = '';
+    } else {
+        $filterWhere .= ' AND status = :status_filter';
+        $filterParams[':status_filter'] = $statusFilterInt;
+    }
+}
+
 if ($req['searchValue'] !== '') {
     $searchFilter = dt_complaint_search_filter(
         $req['searchValue'],

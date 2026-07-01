@@ -521,11 +521,20 @@ if(isset($_POST['submit_complaint']))
             <!-- TABLE CARD -->
 <div class="booking-card">
  
-                <div class="booking-header">
+                <div class="booking-header d-flex justify-content-between align-items-center flex-wrap gap-2">
  
                     <div class="booking-title">
                         Complaint History
 </div>
+
+                    <div class="booking-actions">
+                        <select class="filter-select" id="complaintHistoryStatusFilter">
+                            <option value="">All Status</option>
+                            <?php foreach (complaint_status_map() as $statusId => $statusLabel) { ?>
+                            <option value="<?php echo (int) $statusId; ?>"><?php echo htmlspecialchars($statusLabel); ?></option>
+                            <?php } ?>
+                        </select>
+                    </div>
  
                 </div>
  
@@ -968,12 +977,18 @@ function initComplaintEntryDatatable() {
         return null;
     }
  
-    return $table.DataTable({
+    const table = $table.DataTable({
         processing: true,
         serverSide: true,
         ajax: {
             url: 'api/complaints_datatable.php',
-            type: 'POST'
+            type: 'POST',
+            data: function (payload) {
+                const statusFilter = document.getElementById('complaintHistoryStatusFilter');
+                if (statusFilter) {
+                    payload.status_filter = statusFilter.value;
+                }
+            }
         },
         order: [[6, 'desc']],
         pageLength: 10,
@@ -993,6 +1008,15 @@ function initComplaintEntryDatatable() {
             zeroRecords: 'No matching complaints found.'
         }
     });
+
+    const statusFilter = document.getElementById('complaintHistoryStatusFilter');
+    if (statusFilter) {
+        statusFilter.addEventListener('change', function () {
+            table.ajax.reload();
+        });
+    }
+
+    return table;
 }
  
 function initAssignedComplaintDatatable() {

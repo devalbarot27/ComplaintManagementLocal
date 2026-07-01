@@ -4,12 +4,18 @@ function initComplaintEntryDatatable() {
         return null;
     }
 
-    return $table.DataTable({
+    const table = $table.DataTable({
         processing: true,
         serverSide: true,
         ajax: {
             url: 'api/complaints_datatable.php',
-            type: 'POST'
+            type: 'POST',
+            data: function (payload) {
+                const statusFilter = document.getElementById('complaintHistoryStatusFilter');
+                if (statusFilter) {
+                    payload.status_filter = statusFilter.value;
+                }
+            }
         },
         order: [[5, 'desc']],
         pageLength: 10,
@@ -28,6 +34,15 @@ function initComplaintEntryDatatable() {
             zeroRecords: 'No matching complaints found.'
         }
     });
+
+    const statusFilter = document.getElementById('complaintHistoryStatusFilter');
+    if (statusFilter) {
+        statusFilter.addEventListener('change', function () {
+            table.ajax.reload();
+        });
+    }
+
+    return table;
 }
 
 function initAssignedComplaintDatatable() {
