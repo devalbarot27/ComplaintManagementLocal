@@ -39,14 +39,8 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
             color: #94a3b8;
         }
 
-        #dealerAddressDiv,
-        #endCustomerAddressDiv {
+        .addressInp {
             display: none;
-        }
-
-        #dealerAddressDiv.is-visible,
-        #endCustomerAddressDiv.is-visible {
-            display: contents;
         }
     </style>
 </head>
@@ -60,7 +54,7 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
         <!-- CONTENT -->
         <div class="content">
             <div class="order-form-card" id="orderFormCard">
-                <div class="order-form-grid" id="orderBookingForm">
+                <div class="order-form-grid">
                     <div class="form-group">
                         <label>Dpst</label>
                         <select class="form-control" id="dpst">
@@ -179,13 +173,13 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
 
                     <div class="form-group">
                         <label>Delivery Address</label>
-                        <select class="form-control" id="deliveryAddressType" onchange="changeAddressType(this.value)">
-                            <option value="1">Dealer</option>
-                            <option value="2">End Customer</option>
+                        <select class="form-control" onchange="changeAddressType(this.value)">
+                            <option value=1>Dealer</option>
+                            <option value=2>End Customer</option> 
                         </select>
                     </div>
 
-                    <div id="dealerAddressDiv" class="is-visible">
+                    <div id="dealerAddressDiv">
                         <div class="form-group">
                             <label>Dealer Address</label>
                             <select class="form-control" id="customer_master">
@@ -194,50 +188,28 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
                         </div>
                     </div>
 
-                    <div id="endCustomerAddressDiv">
-                        <div class="form-group">
-                            <label>Email</label>
-                            <input type="email" class="form-control" id="endCustomerEmail" name="end_customer_email"
-                                placeholder="Email" autocomplete="email">
-                        </div>
+                    <div class="form-group addressInp">
+                        <label>Street Address</label>
+                        <textarea class="form-control"></textarea>
+                    </div>
 
-                        <div class="form-group">
-                            <label>Street 1</label>
-                            <input type="text" class="form-control" id="endCustomerStreet1" name="street_1"
-                                placeholder="Street 1" maxlength="255">
-                        </div>
 
-                        <div class="form-group">
-                            <label>Street 2</label>
-                            <input type="text" class="form-control" id="endCustomerStreet2" name="street_2"
-                                placeholder="Street 2" maxlength="255">
-                        </div>
 
-                        <div class="form-group">
-                            <label>Pincode</label>
-                            <select class="form-control" name="pincode" id="orderBookingPincodeSelect"
-                                data-placeholder="Search pincode">
-                                <option value=""></option>
-                            </select>
-                        </div>
+                    <div class="form-group addressInp">
+                        <label>City</label>
+                        <select class="form-control"></select>
+                    </div>
 
-                        <div class="form-group">
-                            <label>City</label>
-                            <input type="text" class="form-control" name="city" id="endCustomerCity"
-                                placeholder="Auto-filled from pincode" maxlength="100" readonly>
-                        </div>
 
-                        <div class="form-group">
-                            <label>District</label>
-                            <input type="text" class="form-control" name="district" id="endCustomerDistrict"
-                                placeholder="Auto-filled from pincode" maxlength="100" readonly>
-                        </div>
 
-                        <div class="form-group">
-                            <label>State</label>
-                            <input type="text" class="form-control" name="state" id="endCustomerState"
-                                placeholder="Auto-filled from pincode" maxlength="100" readonly>
-                        </div>
+                    <div class="form-group addressInp">
+                        <label>State</label>
+                        <select class="form-control"></select>
+                    </div>
+
+                    <div class="form-group addressInp">
+                        <label>Pincode</label>
+                        <input type="text" class="form-control">
                     </div>
                 </div>
             </div>
@@ -298,48 +270,7 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
 </html>
 <?php include('script_js.php'); ?>
 <script src="https://code.jquery.com/ui/1.14.2/jquery-ui.js"></script>
-<script src="js/pincode_select2.js"></script>
 <script>
-    const endCustomerFieldIds = [
-        'endCustomerEmail',
-        'endCustomerStreet1',
-        'endCustomerStreet2',
-        'orderBookingPincodeSelect',
-        'endCustomerCity',
-        'endCustomerDistrict',
-        'endCustomerState'
-    ];
-
-    function setEndCustomerRequired(isRequired) {
-        endCustomerFieldIds.forEach(function (fieldId) {
-            const field = document.getElementById(fieldId);
-            if (!field) {
-                return;
-            }
-
-            if (isRequired) {
-                field.setAttribute('required', 'required');
-            } else {
-                field.removeAttribute('required');
-            }
-        });
-    }
-
-    function changeAddressType(type) {
-        type = String(type);
-
-        if (type === '1') {
-            $('#dealerAddressDiv').addClass('is-visible');
-            $('#endCustomerAddressDiv').removeClass('is-visible');
-            setEndCustomerRequired(false);
-            return;
-        }
-
-        $('#dealerAddressDiv').removeClass('is-visible');
-        $('#endCustomerAddressDiv').addClass('is-visible');
-        setEndCustomerRequired(true);
-    }
-
     $(document).ready(function() {
         $("#dDate").datepicker({
             dateFormat: "dd.mm.yy"
@@ -422,9 +353,6 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
                 cache: true
             }
         });
-
-        initPincodeSelect2('orderBookingForm', 'orderBookingPincodeSelect');
-        changeAddressType($('#deliveryAddressType').val() || '1');
     });
 
     function enableBtn() {
@@ -768,4 +696,13 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
     }
 
 
+    function changeAddressType(type) {
+        if (type == 1) {
+            $("#dealerAddressDiv").show();
+            $(".addressInp").hide();
+        } else {
+            $("#dealerAddressDiv").hide();
+            $(".addressInp").show();
+        }
+    }
 </script>

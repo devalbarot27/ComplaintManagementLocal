@@ -2,7 +2,7 @@
 if(session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-ini_set('display_errors', 1);   
+  
 include('pdo_obconn.php');
 class orderClass
 {
@@ -1305,176 +1305,431 @@ class orderClass
         }
     }
 
-    public function getRecentOrders()
+  public function getRecentOrders()
+
     {
+
         try {
+
             $draw   = isset($_POST['draw']) ? (int)$_POST['draw'] : 0;
+
             $start  = isset($_POST['start']) ? (int)$_POST['start'] : 0;
+
             $length = isset($_POST['length']) ? (int)$_POST['length'] : 10;
-
+ 
             $search = $_POST['search']['value'] ?? '';
-
+ 
             $where = '';
+
             $params = [];
-
+ 
             if (!empty($search)) {
+
                 $where = "AND (
+
                     a.refno ILIKE :search
+
                     OR COALESCE(a.pono, '') ILIKE :search
+
                     OR a.tplcode ILIKE :search
+
                     OR a.tpldesc ILIKE :search
+
                     OR COALESCE(d.order_category, '') ILIKE :search
+
                 )";
+
                 $params[':search'] = "%{$search}%";
-            }
 
+            }
+ 
             $joinSql = "
+
                 FROM plexecom_customer_units AS a
+
                 LEFT JOIN tbl_vayu_delivery_term AS c
+
                     ON a.delterms_code = c.delivery_code::varchar
+
                 LEFT JOIN tbl_vayu_order_category AS d
+
                     ON a.indent_category::varchar = d.id::varchar
+
                 LEFT JOIN spp_payterm_master AS e
+
                     ON a.paycode = e.pay_code::varchar
+
                 LEFT JOIN transporter_master AS f
+
                     ON a.transporter = f.trans_code
+
                 WHERE a.cuno = :createdBy
+
                 {$where}
-            ";
 
+            ";
+ 
             $totalQry = $this->obconn->prepare("
+
                 SELECT COUNT(DISTINCT refno)
+
                 FROM plexecom_customer_units
+
                 WHERE cuno = :createdBy
+
             ");
+
             $totalQry->bindParam(':createdBy', $this->userId, PDO::PARAM_STR);
+
             $totalQry->execute();
+
             $totalRecords = (int) $totalQry->fetchColumn();
-
+ 
             $countSql = "SELECT COUNT(*) FROM (SELECT DISTINCT a.refno {$joinSql}) recent_orders";
+
             $countStmt = $this->obconn->prepare($countSql);
+
             $countStmt->bindParam(':createdBy', $this->userId, PDO::PARAM_STR);
+
             foreach ($params as $key => $value) {
+
                 $countStmt->bindValue($key, $value);
+
             }
+
             $countStmt->execute();
+
             $filteredRecords = (int) $countStmt->fetchColumn();
-
+ 
             $sql = "
-                SELECT DISTINCT ON (a.refno)
-                    a.refno,
-                    a.order_number,
-                    a.pono,
-                    a.indent_date,
-                    d.order_category,
-                    c.delivery_term,
-                    e.pay_desc,
-                    f.trans_name AS transporter
-                {$joinSql}
-                ORDER BY a.refno DESC, a.indent_date DESC
-                LIMIT :length OFFSET :start
-            ";
 
+                SELECT DISTINCT ON (a.refno)
+
+                    a.refno,
+
+                    a.order_number,
+
+                    a.pono,
+
+                    a.indent_date,
+
+                    d.order_category,
+
+                    c.delivery_term,
+
+                    e.pay_desc,
+
+                    f.trans_name AS transporter
+
+                {$joinSql}
+
+                ORDER BY a.refno DESC, a.indent_date DESC
+
+                LIMIT :length OFFSET :start
+
+            ";
+ 
             $stmt = $this->obconn->prepare($sql);
+
             $stmt->bindParam(':createdBy', $this->userId, PDO::PARAM_STR);
+ 
+            foreach ($params as $key => $value) {
+
+                $stmt->bindValue($key, $value);
+
+            }
+ 
+            $stmt->bindValue(':length', $length, PDO::PARAM_INT);
+
+            $stmt->bindValue(':start', $start, PDO::PARAM_INT);
+
+            $stmt->execute();
+ 
+            $data = [];
+ 
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+
+                $refno = (string) ($row['refno'] ?? '');
+
+                $orderNumber = trim((string) ($row['order_number'] ?? ''));
+
+                $orderStatus = $this->resolveRecentOrderStatus($orderNumber, $this->userId);
+ 
+                $data[] = [
+
+                    'ref_no'           => $refno,
+
+                    'order_no'         => $refno,
+
+                    'category'         => $row['order_category'] ?? '-',
+
+                    'order_category'   => $row['order_category'] ?? '-',
+
+                    'delivery_term'    => $row['delivery_term'] ?? '-',
+
+                    'po_number'        => $row['pono'] ?? '-',
+
+                    'payment_term'     => $row['pay_desc'] ?? '-',
+
+                    'transporter'      => $row['transporter'] ?? '-',
+
+                    'order_status'     => $orderStatus,
+
+                    'date'             => !empty($row['indent_date'])
+
+                        ? date('d-m-Y', strtotime($row['indent_date']))
+
+                        : '-',
+
+                    'lines'            => '<button type="button" class="btn btn-sm btn-outline-dark" onclick="openLineItems(\''
+
+                        . htmlspecialchars($refno, ENT_QUOTES, 'UTF-8')
+
+                        . '\')"><i class="fa fa-eye"></i></button>',
+
+                ];
+
+            }
+ 
+            return json_encode([
+
+                'draw'            => $draw,
+
+                'recordsTotal'    => $totalRecords,
+
+                'recordsFiltered' => $filteredRecords,
+
+                'data'            => $data,
+
+            ]);
+
+        } catch (Exception $e) {
+
+            error_log($e->getMessage());
+ 
+            return json_encode([
+
+                'draw' => 0,
+
+                'recordsTotal' => 0,
+
+                'recordsFiltered' => 0,
+
+                'data' => [],
+
+                'error' => $e->getMessage() . $e->getLine(),
+
+            ]);
+
+        }
+
+    }
+ 
+    private function resolveRecentOrderStatus(string $orderNumber, string $cuno): string
+
+    {
+
+        $orderNumber = trim($orderNumber);
+
+        $cuno = trim($cuno);
+ 
+        if ($orderNumber === '' || $cuno === '') {
+
+            return '<span class="status-badge border border-dark">Pending</span>';
+
+        }
+ 
+        $despatchStmt = $this->dpconn->prepare("
+
+            SELECT 1
+
+            FROM despatch
+
+            WHERE cuno = :cuno
+
+              AND TRIM(ordno) = :ordno
+
+              AND cmp != 600
+
+            LIMIT 1
+
+        ");
+
+        $despatchStmt->bindValue(':cuno', $cuno);
+
+        $despatchStmt->bindValue(':ordno', $orderNumber);
+
+        $despatchStmt->execute();
+ 
+        if ($despatchStmt->fetchColumn()) {
+
+            return '<span class="status-badge border border-dark">Despatched</span>';
+
+        }
+ 
+        $ackStmt = $this->dpconn->prepare("
+
+            SELECT 1
+
+            FROM maintdealer
+
+            WHERE cuno = :cuno
+
+              AND TRIM(ordno) = :ordno
+
+              AND company != 600
+
+            LIMIT 1
+
+        ");
+
+        $ackStmt->bindValue(':cuno', $cuno);
+
+        $ackStmt->bindValue(':ordno', $orderNumber);
+
+        $ackStmt->execute();
+ 
+        if ($ackStmt->fetchColumn()) {
+
+            return '<span class="status-badge border border-dark">AO</span>';
+
+        }
+ 
+        return '<span class="status-badge border border-dark">Pending</span>';
+
+    }
+ 
+    public function getRecentOrders_bk()
+
+    {
+
+        $cuno ="CU1A03751";
+
+        try {
+
+            $draw   = isset($_POST['draw']) ? (int)$_POST['draw'] : 0;
+
+            $start  = isset($_POST['start']) ? (int)$_POST['start'] : 0;
+
+            $length = isset($_POST['length']) ? (int)$_POST['length'] : 10;
+ 
+            $search = $_POST['search']['value'] ?? '';
+ 
+            $where = '';
+
+            $params = [];
+ 
+            if (!empty($search)) {
+
+                $where = "AND (refno ILIKE :search OR tplcode ILIKE :search OR tpldesc ILIKE :search)";
+
+                $params[':search'] = "%{$search}%";
+
+            }
+ 
+            $totalQry = $this->obconn->prepare("SELECT DISTINCT(select COUNT(*) FROM plexecom_customer_units WHERE cuno = :createdBy)");
+
+            $totalQry->bindParam(':createdBy', $this->userId, PDO::PARAM_STR);
+
+            $totalQry->execute();
+
+            $totalRecords = $totalQry->fetchColumn();
+
+            $countSql = "SELECT DISTINCT(SELECT COUNT(*) FROM plexecom_customer_units WHERE cuno = :createdBy {$where})";
+
+            $countStmt = $this->obconn->prepare($countSql);
+
+            $countStmt->bindParam(':createdBy', $this->userId, PDO::PARAM_STR);
 
             foreach ($params as $key => $value) {
+
+                $countStmt->bindValue($key, $value);
+
+            }
+
+            $countStmt->execute();
+
+            $filteredRecords = $countStmt->fetchColumn();
+ 
+            $sql = "SELECT distinct a.refno, a.order_number, a.indent_date, a.tplcode, a.tpldesc, a.qty, a.price, d.order_category,a.deladdr,c.delivery_term,e.pay_desc,f.trans_name as transporter FROM plexecom_customer_units as a LEFT JOIN tbl_vayu_delivery_term as c on a.delterms_code=c.delivery_code::varchar LEFT JOIN tbl_vayu_order_category as d on a.indent_category::varchar = d.id::varchar LEFT JOIN spp_payterm_master as e on a.paycode=e.pay_code::varchar LEFT JOIN transporter_master as f on a.transporter = f.trans_code  WHERE cuno = :createdBy {$where} ORDER BY refno DESC LIMIT :length OFFSET :start";
+ 
+            $stmt = $this->obconn->prepare($sql);
+ 
+            $stmt->bindParam(':createdBy', $this->userId, PDO::PARAM_STR);
+ 
+            foreach ($params as $key => $value) {
+
                 $stmt->bindValue($key, $value);
-            }
 
+            }
+ 
             $stmt->bindValue(':length', $length, PDO::PARAM_INT);
+
             $stmt->bindValue(':start', $start, PDO::PARAM_INT);
+ 
             $stmt->execute();
-
+ 
             $data = [];
-
+ 
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                $refno = (string) ($row['refno'] ?? '');
-                $orderNumber = trim((string) ($row['order_number'] ?? ''));
-                $orderStatus = $this->resolveRecentOrderStatus($orderNumber, $this->userId);
-
+ 
                 $data[] = [
-                    'ref_no'           => $refno,
-                    'order_no'         => $refno,
-                    'category'         => $row['order_category'] ?? '-',
-                    'order_category'   => $row['order_category'] ?? '-',
-                    'delivery_term'    => $row['delivery_term'] ?? '-',
-                    'po_number'        => $row['pono'] ?? '-',
-                    'payment_term'     => $row['pay_desc'] ?? '-',
-                    'transporter'      => $row['transporter'] ?? '-',
-                    'order_status'     => $orderStatus,
-                    'date'             => !empty($row['indent_date'])
-                        ? date('d-m-Y', strtotime($row['indent_date']))
-                        : '-',
-                    'lines'            => '<button type="button" style="background:transparent;border:none;" onclick="openLineItems(\''
-                        . htmlspecialchars($refno, ENT_QUOTES, 'UTF-8')
-                        . '\')"><i class="fa fa-eye"></i></button>',
+
+                    'order_no'         => $row['refno'],
+
+                    'order_category'   => $row['order_category'],
+
+                    'dealer_address'   => $row['deladdr'],
+
+                    'delivery_term'    => $row['delivery_term'],
+
+                    'payment_term'     => $row['pay_desc'],
+
+                    'transporter'      => $row['transporter'],
+
+                    'date'             => date('d-m-Y', strtotime($row['indent_date'])),
+
+                    'lines' => '<button style="background:transparent;border:none;" onclick="openLineItems(\'' . $row['refno'] . '\')"><i class="fa fa-eye"></i></button>'
+
                 ];
+
             }
 
             return json_encode([
+
                 'draw'            => $draw,
-                'recordsTotal'    => $totalRecords,
-                'recordsFiltered' => $filteredRecords,
-                'data'            => $data,
+
+                'recordsTotal'    => (int)$totalRecords,
+
+                'recordsFiltered' => (int)$filteredRecords,
+
+                'data'            => $data
+
             ]);
+
         } catch (Exception $e) {
+ 
             error_log($e->getMessage());
-
+ 
             return json_encode([
+
                 'draw' => 0,
+
                 'recordsTotal' => 0,
+
                 'recordsFiltered' => 0,
+
                 'data' => [],
-                'error' => $e->getMessage() . $e->getLine(),
+
+                'error' => $e->getMessage() . $e->getLine()
+
             ]);
+
         }
+
     }
 
-    private function resolveRecentOrderStatus(string $orderNumber, string $cuno): string
-    {
-        $orderNumber = trim($orderNumber);
-        $cuno = trim($cuno);
-
-        if ($orderNumber === '' || $cuno === '') {
-            return 'Pending';
-        }
-
-        $despatchStmt = $this->dpconn->prepare("
-            SELECT 1
-            FROM despatch
-            WHERE cuno = :cuno
-              AND TRIM(ordno) = :ordno
-              AND cmp != 600
-            LIMIT 1
-        ");
-        $despatchStmt->bindValue(':cuno', $cuno);
-        $despatchStmt->bindValue(':ordno', $orderNumber);
-        $despatchStmt->execute();
-
-        if ($despatchStmt->fetchColumn()) {
-            return 'Despatched';
-        }
-
-        $ackStmt = $this->dpconn->prepare("
-            SELECT 1
-            FROM maintdealer
-            WHERE cuno = :cuno
-              AND TRIM(ordno) = :ordno
-              AND company != 600
-            LIMIT 1
-        ");
-        $ackStmt->bindValue(':cuno', $cuno);
-        $ackStmt->bindValue(':ordno', $orderNumber);
-        $ackStmt->execute();
-
-        if ($ackStmt->fetchColumn()) {
-            return 'AO';
-        }
-
-        return 'Pending';
-    }
-
+ 
     public function customer_master()
     {
         $search = trim($_POST['search'] ?? '');
