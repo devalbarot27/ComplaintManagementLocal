@@ -174,7 +174,7 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
 
                     <div class="form-group">
                         <label>Freight Amount</label>
-                        <input type="text" placeholder="Freigh Amount" id="fAmount" class="form-control" />
+                        <input type="text" placeholder="Freigh Amount" id="fAmount" class="form-control" inputmode="decimal" />
                     </div>
 
                     <div class="form-group">
@@ -425,6 +425,17 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
 
         initPincodeSelect2('orderBookingForm', 'orderBookingPincodeSelect');
         changeAddressType($('#deliveryAddressType').val() || '1');
+
+        $('#fAmount').on('input', function () {
+            let value = $(this).val().replace(/[^0-9.]/g, '');
+            const dotIndex = value.indexOf('.');
+
+            if (dotIndex !== -1) {
+                value = value.slice(0, dotIndex + 1) + value.slice(dotIndex + 1).replace(/\./g, '');
+            }
+
+            $(this).val(value);
+        });
     });
 
     function enableBtn() {

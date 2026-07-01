@@ -1113,7 +1113,7 @@ class orderClass
                     ':adrcode'           => $adrcode,
                     ':refno'             => $refno,
                     ':hsn'               => "80:11:545",
-                    ':state'             => $addressState !== '' ? $addressState : $state, // Added new field 01-07-26
+                    ':state'             => $state,
                     ':country'           => $country,
                     ':edistatus'         => 'Y',
                     ':edi_date'          => date('d.m.Y')
