@@ -81,29 +81,31 @@ function dashboard_fetch_pending_orders_count(PDO $conn, array $scope, string $p
 
 function dashboard_fetch_pending_over_10_days_count(PDO $conn, array $scope): int
 {
-    $userFilter = dashboard_scope_mapping_username_sql($scope);
+    $cunoFilter = dashboard_scope_cuno_sql($scope, 'p.cuno');
 
     try {
-        if ($scope['mode'] === 'all') {
-            $stmt = $conn->prepare("
-                SELECT COUNT(*) AS cnt
-                FROM pendingordersnew p
-                WHERE p.company != 600
-                  AND p.orddt <= (CURRENT_DATE - INTERVAL '10 days')::date
-            ");
-        } else {
-            $stmt = $conn->prepare("
-                SELECT COUNT(*) AS cnt
-                FROM pendingordersnew p, user_area_dpst_mapping u
-                WHERE trim(p.dpst) = ANY(u.dpst)
-                  AND trim(p.area) = u.area
-                  AND u.valid = 'Y'
-                  $userFilter
-                  AND p.orddt <= (CURRENT_DATE - INTERVAL '10 days')::date
-            ");
-            dashboard_bind_scope_params($stmt, $scope);
-        }
-
+        $stmt = $conn->prepare("
+            SELECT COUNT(DISTINCT p.ordno) AS cnt
+            FROM pendingordersnew p
+            WHERE p.company != 600
+              $cunoFilter
+              AND p.orddt < (CURRENT_DATE - INTERVAL '10 days')::date
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM maintdealer m
+                  WHERE m.company != 600
+                    AND TRIM(m.cuno) = TRIM(p.cuno)
+                    AND TRIM(m.ordno) = TRIM(p.ordno)
+              )
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM despatch d
+                  WHERE d.cmp != 600
+                    AND TRIM(d.cuno) = TRIM(p.cuno)
+                    AND TRIM(d.ordno) = TRIM(p.ordno)
+              )
+        ");
+        dashboard_bind_scope_params($stmt, $scope);
         $stmt->execute();
 
         return (int) $stmt->fetchColumn();
