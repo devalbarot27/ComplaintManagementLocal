@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/dashboard_scope_helpers.php';
+
 function dashboard_period_options(): array
 {
     return [
@@ -43,39 +45,33 @@ function dashboard_period_date_sql(string $dateColumn, string $period): string
     }
 }
 
-function dashboard_fetch_pending_orders_count(PDO $conn, string $userName, string $period): int
+function dashboard_fetch_pending_orders_count(PDO $conn, array $scope, string $period): int
 {
     $dateFilter = dashboard_period_date_sql('p.orddt', $period);
+    $userFilter = dashboard_scope_mapping_username_sql($scope);
 
     try {
-    
-        $stmt = $conn->prepare("
-            SELECT COUNT(*) AS cnt
-            FROM pendingordersnew p, user_area_dpst_mapping u
-            WHERE u.usr_name = :uname
-              AND trim(p.dpst) = ANY(u.dpst)
-              AND trim(p.area) = u.area
-              AND u.valid = 'Y'
-              AND $dateFilter
-        ");
-        
-$stmt_new = $conn->prepare("
-    SELECT COUNT(*) AS cnt
-    FROM pendingordersnew p
-    LEFT OUTER JOIN dpst_master dm 
-        ON TRIM(p.dpst) = dm.dpst_code::text
-    LEFT JOIN tbl_commitment tc 
-        ON p.ordno = tc.orderno 
-        AND p.posno = tc.posno
-    WHERE p.company != 600
-      AND p.cuno = :uname
-      AND $dateFilter
-");
+        if ($scope['mode'] === 'all') {
+            $stmt = $conn->prepare("
+                SELECT COUNT(*) AS cnt
+                FROM pendingordersnew p
+                WHERE p.company != 600
+                  AND $dateFilter
+            ");
+        } else {
+            $stmt = $conn->prepare("
+                SELECT COUNT(*) AS cnt
+                FROM pendingordersnew p, user_area_dpst_mapping u
+                WHERE trim(p.dpst) = ANY(u.dpst)
+                  AND trim(p.area) = u.area
+                  AND u.valid = 'Y'
+                  $userFilter
+                  AND $dateFilter
+            ");
+            dashboard_bind_scope_params($stmt, $scope);
+        }
 
-$stmt->bindValue(':uname', $userName);
-$stmt->execute();
-        
-
+        $stmt->execute();
 
         return (int) $stmt->fetchColumn();
     } catch (Throwable $e) {
@@ -83,19 +79,31 @@ $stmt->execute();
     }
 }
 
-function dashboard_fetch_pending_over_10_days_count(PDO $conn, string $userName): int
+function dashboard_fetch_pending_over_10_days_count(PDO $conn, array $scope): int
 {
+    $userFilter = dashboard_scope_mapping_username_sql($scope);
+
     try {
-        $stmt = $conn->prepare("
-            SELECT COUNT(*) AS cnt
-            FROM pendingordersnew p, user_area_dpst_mapping u
-            WHERE u.usr_name = :uname
-              AND trim(p.dpst) = ANY(u.dpst)
-              AND trim(p.area) = u.area
-              AND u.valid = 'Y'
-              AND p.orddt <= (CURRENT_DATE - INTERVAL '10 days')::date
-        ");
-        $stmt->bindValue(':uname', $userName);
+        if ($scope['mode'] === 'all') {
+            $stmt = $conn->prepare("
+                SELECT COUNT(*) AS cnt
+                FROM pendingordersnew p
+                WHERE p.company != 600
+                  AND p.orddt <= (CURRENT_DATE - INTERVAL '10 days')::date
+            ");
+        } else {
+            $stmt = $conn->prepare("
+                SELECT COUNT(*) AS cnt
+                FROM pendingordersnew p, user_area_dpst_mapping u
+                WHERE trim(p.dpst) = ANY(u.dpst)
+                  AND trim(p.area) = u.area
+                  AND u.valid = 'Y'
+                  $userFilter
+                  AND p.orddt <= (CURRENT_DATE - INTERVAL '10 days')::date
+            ");
+            dashboard_bind_scope_params($stmt, $scope);
+        }
+
         $stmt->execute();
 
         return (int) $stmt->fetchColumn();
@@ -111,42 +119,31 @@ function dashboard_format_pending_over_10_days_alert(int $count): string
     return $count . ' ' . $orderLabel . ' pending for more than 10 days';
 }
 
-function dashboard_fetch_acknowledgement_count(PDO $conn, string $userName, string $period): int
+function dashboard_fetch_acknowledgement_count(PDO $conn, array $scope, string $period): int
 {
     $dateFilter = dashboard_period_date_sql('m.ord_date', $period);
+    $userFilter = dashboard_scope_mapping_username_sql($scope);
 
     try {
-        $stmt = $conn->prepare("
-            SELECT COUNT(*) AS cnt
-            FROM maintdealer m
-            JOIN user_area_dpst_mapping u ON m.dpst = ANY(u.dpst) AND m.area = u.area
-            WHERE u.usr_name = :uname
-              AND u.valid = 'Y'
-              AND $dateFilter
-        ");
+        if ($scope['mode'] === 'all') {
+            $stmt = $conn->prepare("
+                SELECT COUNT(*) AS cnt
+                FROM maintdealer m
+                WHERE m.company != 600
+                  AND $dateFilter
+            ");
+        } else {
+            $stmt = $conn->prepare("
+                SELECT COUNT(*) AS cnt
+                FROM maintdealer m
+                JOIN user_area_dpst_mapping u ON m.dpst = ANY(u.dpst) AND m.area = u.area
+                WHERE u.valid = 'Y'
+                  $userFilter
+                  AND $dateFilter
+            ");
+            dashboard_bind_scope_params($stmt, $scope);
+        }
 
-
-        $stmt_new = $conn->prepare("
-    SELECT COUNT(*) AS cnt
-    FROM (
-        SELECT DISTINCT 
-            m.cuno,
-            m.ordno,
-            m.ord_date,
-            m.purno,
-            m.dpst,
-            d.dpst_desc
-        FROM maintdealer m
-        LEFT OUTER JOIN dpst_master d 
-            ON TRIM(m.dpst) = d.dpst_code::text
-        WHERE m.company != 600
-          AND m.cuno = :uname
-          AND $dateFilter
-    ) x
-");
-
-
-        $stmt->bindValue(':uname', $userName);
         $stmt->execute();
 
         return (int) $stmt->fetchColumn();
@@ -155,19 +152,20 @@ function dashboard_fetch_acknowledgement_count(PDO $conn, string $userName, stri
     }
 }
 
-function dashboard_fetch_total_orders_count(PDO $conn, string $userName, string $period): int
+function dashboard_fetch_total_orders_count(PDO $conn, array $scope, string $period): int
 {
-    // complaint_management DB: tbl_vayu_orders_header
     $dateFilter = dashboard_period_date_sql('(o.created_at::date)', $period);
+    $userFilter = dashboard_scope_created_by_sql($scope, 'o.created_by');
 
     try {
         $stmt = $conn->prepare("
             SELECT COUNT(*) AS cnt
             FROM tbl_vayu_orders_header o
-            WHERE o.created_by = :uname
+            WHERE 1 = 1
+              $userFilter
               AND $dateFilter
         ");
-        $stmt->bindValue(':uname', $userName);
+        dashboard_bind_scope_params($stmt, $scope);
         $stmt->execute();
 
         return (int) $stmt->fetchColumn();
@@ -193,24 +191,39 @@ function dashboard_build_month_series(int $months = 6): array
     return $series;
 }
 
-function dashboard_fetch_monthly_acknowledgement_counts(PDO $conn, string $userName, string $startDate): array
+function dashboard_fetch_monthly_acknowledgement_counts(PDO $conn, array $scope, string $startDate): array
 {
     $counts = [];
+    $userFilter = dashboard_scope_mapping_username_sql($scope);
 
     try {
-        $stmt = $conn->prepare("
-            SELECT to_char(date_trunc('month', m.ord_date), 'YYYY-MM') AS month_key,
-                   COUNT(*) AS cnt
-            FROM maintdealer m
-            JOIN user_area_dpst_mapping u ON m.dpst = ANY(u.dpst) AND m.area = u.area
-            WHERE u.usr_name = :uname
-              AND u.valid = 'Y'
-              AND m.ord_date >= :start_date
-              AND m.ord_date <= CURRENT_DATE
-            GROUP BY 1
-            ORDER BY 1
-        ");
-        $stmt->bindValue(':uname', $userName);
+        if ($scope['mode'] === 'all') {
+            $stmt = $conn->prepare("
+                SELECT to_char(date_trunc('month', m.ord_date), 'YYYY-MM') AS month_key,
+                       COUNT(*) AS cnt
+                FROM maintdealer m
+                WHERE m.company != 600
+                  AND m.ord_date >= :start_date
+                  AND m.ord_date <= CURRENT_DATE
+                GROUP BY 1
+                ORDER BY 1
+            ");
+        } else {
+            $stmt = $conn->prepare("
+                SELECT to_char(date_trunc('month', m.ord_date), 'YYYY-MM') AS month_key,
+                       COUNT(*) AS cnt
+                FROM maintdealer m
+                JOIN user_area_dpst_mapping u ON m.dpst = ANY(u.dpst) AND m.area = u.area
+                WHERE u.valid = 'Y'
+                  $userFilter
+                  AND m.ord_date >= :start_date
+                  AND m.ord_date <= CURRENT_DATE
+                GROUP BY 1
+                ORDER BY 1
+            ");
+            dashboard_bind_scope_params($stmt, $scope);
+        }
+
         $stmt->bindValue(':start_date', $startDate);
         $stmt->execute();
 
@@ -224,25 +237,40 @@ function dashboard_fetch_monthly_acknowledgement_counts(PDO $conn, string $userN
     return $counts;
 }
 
-function dashboard_fetch_monthly_pending_counts(PDO $conn, string $userName, string $startDate): array
+function dashboard_fetch_monthly_pending_counts(PDO $conn, array $scope, string $startDate): array
 {
     $counts = [];
+    $userFilter = dashboard_scope_mapping_username_sql($scope);
 
     try {
-        $stmt = $conn->prepare("
-            SELECT to_char(date_trunc('month', p.orddt), 'YYYY-MM') AS month_key,
-                   COUNT(*) AS cnt
-            FROM pendingordersnew p, user_area_dpst_mapping u
-            WHERE u.usr_name = :uname
-              AND trim(p.dpst) = ANY(u.dpst)
-              AND trim(p.area) = u.area
-              AND u.valid = 'Y'
-              AND p.orddt >= :start_date
-              AND p.orddt <= CURRENT_DATE
-            GROUP BY 1
-            ORDER BY 1
-        ");
-        $stmt->bindValue(':uname', $userName);
+        if ($scope['mode'] === 'all') {
+            $stmt = $conn->prepare("
+                SELECT to_char(date_trunc('month', p.orddt), 'YYYY-MM') AS month_key,
+                       COUNT(*) AS cnt
+                FROM pendingordersnew p
+                WHERE p.company != 600
+                  AND p.orddt >= :start_date
+                  AND p.orddt <= CURRENT_DATE
+                GROUP BY 1
+                ORDER BY 1
+            ");
+        } else {
+            $stmt = $conn->prepare("
+                SELECT to_char(date_trunc('month', p.orddt), 'YYYY-MM') AS month_key,
+                       COUNT(*) AS cnt
+                FROM pendingordersnew p, user_area_dpst_mapping u
+                WHERE trim(p.dpst) = ANY(u.dpst)
+                  AND trim(p.area) = u.area
+                  AND u.valid = 'Y'
+                  $userFilter
+                  AND p.orddt >= :start_date
+                  AND p.orddt <= CURRENT_DATE
+                GROUP BY 1
+                ORDER BY 1
+            ");
+            dashboard_bind_scope_params($stmt, $scope);
+        }
+
         $stmt->bindValue(':start_date', $startDate);
         $stmt->execute();
 
@@ -256,14 +284,14 @@ function dashboard_fetch_monthly_pending_counts(PDO $conn, string $userName, str
     return $counts;
 }
 
-function dashboard_fetch_monthly_chart_data(PDO $conn, string $userName, int $months = 6): array
+function dashboard_fetch_monthly_chart_data(PDO $conn, array $scope, int $months = 6): array
 {
     $monthSeries = dashboard_build_month_series($months);
     $monthKeys = array_keys($monthSeries);
     $startDate = $monthKeys[0] . '-01';
 
-    $acknowledgementCounts = dashboard_fetch_monthly_acknowledgement_counts($conn, $userName, $startDate);
-    $pendingCounts = dashboard_fetch_monthly_pending_counts($conn, $userName, $startDate);
+    $acknowledgementCounts = dashboard_fetch_monthly_acknowledgement_counts($conn, $scope, $startDate);
+    $pendingCounts = dashboard_fetch_monthly_pending_counts($conn, $scope, $startDate);
 
     foreach ($monthKeys as $monthKey) {
         $monthSeries[$monthKey]['acknowledged'] = $acknowledgementCounts[$monthKey] ?? 0;
@@ -286,28 +314,48 @@ function dashboard_format_dispatches_delivered_this_week_alert(int $count): stri
     return $count . ' ' . $label . ' delivered this week';
 }
 
-function dashboard_fetch_dispatched_count(PDO $conn, string $userName, string $period): int
+function dashboard_fetch_dispatched_count(PDO $conn, array $scope, string $period): int
 {
     $dateFilter = dashboard_period_date_sql('a.invdate', $period);
+    $userFilter = dashboard_scope_mapping_username_sql($scope, 'u.usr_name');
 
     try {
-        $stmt = $conn->prepare("
-            SELECT COUNT(*) AS cnt
-            FROM (
-                SELECT DISTINCT ON (a.invdate, a.cmp, a.ordno, a.invref, a.invno) a.invno
-                FROM despatch a
-                LEFT JOIN lr_details b
-                    ON a.invref = b.invref AND a.invno = b.invno AND a.cmp = b.company
-                LEFT JOIN dpst_master d ON d.dpst_code::text = a.dpst
-                INNER JOIN user_area_dpst_mapping u
-                    ON trim(a.dpst) = ANY(u.dpst) AND u.valid = 'Y' AND u.usr_name = :uname
-                WHERE a.cmp != 600
-                  AND a.dpst NOT IN ('SLS500', 'SLS01', 'SO0600', 'SAL01')
-                  AND $dateFilter
-                ORDER BY a.invdate DESC, a.ordno, a.invref, a.invno
-            ) x
-        ");
-        $stmt->bindValue(':uname', $userName);
+        if ($scope['mode'] === 'all') {
+            $stmt = $conn->prepare("
+                SELECT COUNT(*) AS cnt
+                FROM (
+                    SELECT DISTINCT ON (a.invdate, a.cmp, a.ordno, a.invref, a.invno) a.invno
+                    FROM despatch a
+                    LEFT JOIN lr_details b
+                        ON a.invref = b.invref AND a.invno = b.invno AND a.cmp = b.company
+                    LEFT JOIN dpst_master d ON d.dpst_code::text = a.dpst
+                    WHERE a.cmp != 600
+                      AND a.dpst NOT IN ('SLS500', 'SLS01', 'SO0600', 'SAL01')
+                      AND $dateFilter
+                    ORDER BY a.invdate DESC, a.ordno, a.invref, a.invno
+                ) x
+            ");
+        } else {
+            $stmt = $conn->prepare("
+                SELECT COUNT(*) AS cnt
+                FROM (
+                    SELECT DISTINCT ON (a.invdate, a.cmp, a.ordno, a.invref, a.invno) a.invno
+                    FROM despatch a
+                    LEFT JOIN lr_details b
+                        ON a.invref = b.invref AND a.invno = b.invno AND a.cmp = b.company
+                    LEFT JOIN dpst_master d ON d.dpst_code::text = a.dpst
+                    INNER JOIN user_area_dpst_mapping u
+                        ON trim(a.dpst) = ANY(u.dpst) AND u.valid = 'Y'
+                    WHERE a.cmp != 600
+                      AND a.dpst NOT IN ('SLS500', 'SLS01', 'SO0600', 'SAL01')
+                      $userFilter
+                      AND $dateFilter
+                    ORDER BY a.invdate DESC, a.ordno, a.invref, a.invno
+                ) x
+            ");
+            dashboard_bind_scope_params($stmt, $scope);
+        }
+
         $stmt->execute();
 
         return (int) $stmt->fetchColumn();
@@ -316,21 +364,23 @@ function dashboard_fetch_dispatched_count(PDO $conn, string $userName, string $p
     }
 }
 
-function dashboard_fetch_stats(PDO $dpconn, PDO $obconn, string $userName, ?string $period = null): array
+function dashboard_fetch_stats(PDO $dpconn, PDO $obconn, ?string $period = null): array
 {
     $selectedPeriod = dashboard_resolve_period($period);
     $periodOptions = dashboard_period_options();
+    $scope = dashboard_resolve_view_scope($obconn);
 
     return [
         'selected_period' => $selectedPeriod,
         'selected_period_label' => $periodOptions[$selectedPeriod],
         'period_options' => $periodOptions,
-        'pending_orders_count' => dashboard_fetch_pending_orders_count($dpconn, $userName, $selectedPeriod),
-        'acknowledgement_count' => dashboard_fetch_acknowledgement_count($dpconn, $userName, $selectedPeriod),
-        'total_orders_count' => dashboard_fetch_total_orders_count($obconn, $userName, $selectedPeriod),
-        'pending_over_10_days_count' => dashboard_fetch_pending_over_10_days_count($dpconn, $userName),
-        'dispatched_orders_count' => dashboard_fetch_dispatched_count($dpconn, $userName, $selectedPeriod),
-        'dispatches_delivered_this_week_count' => dashboard_fetch_dispatched_count($dpconn, $userName, 'this_week'),
-        'monthly_chart' => dashboard_fetch_monthly_chart_data($dpconn, $userName),
+        'view_scope' => $scope,
+        'pending_orders_count' => dashboard_fetch_pending_orders_count($dpconn, $scope, $selectedPeriod),
+        'acknowledgement_count' => dashboard_fetch_acknowledgement_count($dpconn, $scope, $selectedPeriod),
+        'total_orders_count' => dashboard_fetch_total_orders_count($obconn, $scope, $selectedPeriod),
+        'pending_over_10_days_count' => dashboard_fetch_pending_over_10_days_count($dpconn, $scope),
+        'dispatched_orders_count' => dashboard_fetch_dispatched_count($dpconn, $scope, $selectedPeriod),
+        'dispatches_delivered_this_week_count' => dashboard_fetch_dispatched_count($dpconn, $scope, 'this_week'),
+        'monthly_chart' => dashboard_fetch_monthly_chart_data($dpconn, $scope),
     ];
 }

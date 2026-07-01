@@ -25,7 +25,7 @@ if (!rbac_user_can($obconn, $dashboardModule, 'view')) {
 
 
 $userName = $_SESSION['usr_name'] ?? '0';
-$dashboardStats = dashboard_fetch_stats($dpconn, $obconn, $userName, $_GET['period'] ?? null);
+$dashboardStats = dashboard_fetch_stats($dpconn, $obconn, $_GET['period'] ?? null);
 
 $selectedPeriod = $dashboardStats['selected_period'];
 $selectedPeriodLabel = $dashboardStats['selected_period_label'];
