@@ -402,10 +402,12 @@
         }
 
         .status-badge {
+            display: inline-block;
             padding: 4px 10px;
             border-radius: 20px;
             font-size: 12px;
             font-weight: 500;
+            white-space: nowrap;
         }
 
         .created {
@@ -524,3 +526,9 @@
             }
 
         }
+
+/* Status labels: keep on one line on narrow screens */
+.status-badge,
+.complaint-status-label {
+    white-space: nowrap;
+}
