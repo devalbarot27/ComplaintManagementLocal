@@ -1,10 +1,9 @@
 <!doctype html>
 <?php
-require_once __DIR__ . '/includes/login_helpers.php';
-
-login_bootstrap_session();
+session_start();
 
 include 'pdo_obconn.php';
+include 'includes/login_helpers.php';
 
 $error_message = '';
 $success_message = '';

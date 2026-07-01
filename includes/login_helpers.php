@@ -2,70 +2,6 @@
 
 require_once __DIR__ . '/password_security_helpers.php';
 
-function login_bootstrap_session(): void
-{
-    if (session_status() !== PHP_SESSION_NONE) {
-        return;
-    }
-
-    session_set_cookie_params([
-        'lifetime' => 0,
-        'path' => '/',
-        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
-        'httponly' => true,
-        'samesite' => 'Lax',
-    ]);
-
-    session_start();
-}
-
-function login_destroy_session(): void
-{
-    $_SESSION = [];
-
-    if (ini_get('session.use_cookies')) {
-        $params = session_get_cookie_params();
-        setcookie(
-            session_name(),
-            '',
-            time() - 42000,
-            $params['path'],
-            $params['domain'],
-            $params['secure'],
-            $params['httponly']
-        );
-    }
-
-    if (session_status() === PHP_SESSION_ACTIVE) {
-        session_destroy();
-    }
-
-    login_clear_remember_cookie();
-}
-
-function login_requires_browser_guard(): bool
-{
-    return !empty($_SESSION['usr_name']) && empty($_SESSION['session_remember']);
-}
-
-function login_validate_browser_session(): bool
-{
-    if (empty($_SESSION['usr_name'])) {
-        return true;
-    }
-
-    if (!empty($_SESSION['session_remember'])) {
-        return true;
-    }
-
-    if (!empty($_SESSION['browser_session_fresh'])) {
-        unset($_SESSION['browser_session_fresh']);
-        return true;
-    }
-
-    return false;
-}
-
 function login_remember_cookie_name(): string
 {
     return 'dp_remember';
@@ -182,8 +118,6 @@ function login_start_session(array $user, bool $remember = false): void
     $_SESSION['display_name'] = login_display_name($user);
     $_SESSION['role'] = (int) ($user['role'] ?? 0);
     $_SESSION['user_id'] = (int) ($user['id'] ?? 0);
-    $_SESSION['session_remember'] = $remember;
-    $_SESSION['browser_session_fresh'] = true;
     unset($_SESSION['rbac_permissions']);
 
     if ($remember) {

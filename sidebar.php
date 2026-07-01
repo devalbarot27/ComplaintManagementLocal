@@ -1,4 +1,7 @@
   <?php
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
     include("session_check.php");
     require_once __DIR__ . '/includes/admin_access_helpers.php';
     require_once __DIR__ . '/includes/rbac_access_helpers.php';
@@ -376,6 +379,3 @@ mobileClose.addEventListener('click', function () {
     sidebar.classList.remove('mobile-show');
 });
 </script>
-<?php if (login_requires_browser_guard()): ?>
-<script src="js/session_browser_guard.js"></script>
-<?php endif; ?>
