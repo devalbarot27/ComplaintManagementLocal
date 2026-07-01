@@ -1157,6 +1157,688 @@ class orderClass
         }
     }
 
+    public function submitCart_bk()
+
+    {
+
+        try {
+ 
+            $addrCode  = $_POST['addressCode'];
+
+            $area      = $_POST['area'];
+
+            $indcat    = $_POST['orderCategory'];
+
+            $deladdr   = strtoupper($_POST['addressCode']);
+
+            $trans     = $_POST['transporter'];
+
+            $delterms  = $_POST['deliveryTerm'];
+
+            $paycode   = $_POST['paymentTerm'];
+
+            $dpst      = "90092";
+
+            $pono      = $_POST['pono'];
+
+            $frtamount = $_POST['freightAmount'] ?? null;
+ 
+            $this->obconn->beginTransaction();
+ 
+            $rs = $this->obconn->prepare("select to_char(current_date,'YYMMDD') as ymd");
+
+            $rs->execute();
+
+            $getData = $rs->fetch(PDO::FETCH_ASSOC);
+
+            $ymd = $getData['ymd'];
+ 
+            $rs = $this->obconn->prepare("select nextval('dp_spares') as slno");
+
+            $rs->execute();
+
+            $getData = $rs->fetch(PDO::FETCH_ASSOC);
+
+            $slno = $getData['slno'];
+ 
+            $slno = str_pad($slno, 4, "0", STR_PAD_LEFT);
+ 
+            $refno = "E/UNITS/" . $ymd . $slno;
+ 
+ 
+            $cartStmt = $this->obconn->prepare("
+
+            SELECT item_code,
+
+                   item_name,
+
+                   qty,
+
+                   price,
+
+                   total_amount
+
+            FROM tbl_vayu_cartitems
+
+            WHERE created_by = :createdBy
+
+            AND status = 0
+
+        ");
+ 
+            $cartStmt->execute([
+
+                ':createdBy' => $this->userId
+
+            ]);
+ 
+            $cartItems = $cartStmt->fetchAll(PDO::FETCH_ASSOC);
+ 
+            if (empty($cartItems)) {
+
+                throw new Exception("Cart is empty.");
+
+            }
+ 
+ 
+            $stmt = $this->obconn->prepare("
+
+            SELECT max(substr(indent_number,7,9)) AS maxindno
+
+            FROM plexecom_customer_units15062026
+
+            WHERE areacode = :area
+
+            AND indent_date >= '01.04.2022'
+
+        ");
+ 
+            $stmt->execute([
+
+                ':area' => $area
+
+            ]);
+ 
+            $maxIndno = $stmt->fetchColumn();
+ 
+            $letter = substr($maxIndno, 0, 1);
+
+            $number = substr($maxIndno, 1, 2);
+ 
+            $letter = $letter ?: 'A';
+
+            $number = $number ?: 0;
+ 
+            if ($number == 99) {
+
+                $letter = chr(ord($letter) + 1);
+
+                $number = 1;
+
+            } else {
+
+                $number++;
+
+            }
+ 
+            $number   = str_pad($number, 2, "0", STR_PAD_LEFT);
+
+            $newIndno = $indcat . 'N' . $letter . $number;
+ 
+            $cmp      = "401";
+
+            $cuno     = "CU1A03751";
+
+            $aoseries = "201";
+
+            $state    = "TN";
+
+            $sid      = session_id();
+ 
+          
+ 
+            $customerStmt = $this->obconn->prepare("
+
+            SELECT
+
+                cm.adr_code,
+
+                cm.country,
+
+                ca.custaddr
+
+            FROM customer_master cm
+
+            LEFT JOIN customer_address ca
+
+                ON ca.adr_code = cm.adr_code
+
+               AND ca.cuno = cm.cuno
+
+            WHERE cm.cuno = :cuno
+
+        ");
+ 
+            $customerStmt->execute([
+
+                ':cuno' => $cuno
+
+            ]);
+ 
+            $customer = $customerStmt->fetch(PDO::FETCH_ASSOC);
+ 
+            $adrcode = $customer['adr_code'];
+
+            $country = trim($customer['country']);
+
+            $invaddr = pg_escape_string($customer['custaddr']);
+ 
+           
+ 
+            $dpstStmt = $this->obconn->prepare("
+
+            SELECT product_group
+
+            FROM dpst_master
+
+            WHERE dpst_code = :dpst
+
+        ");
+ 
+            $dpstStmt->execute([
+
+                ':dpst' => $dpst
+
+            ]);
+ 
+            $div = $dpstStmt->fetchColumn();
+ 
+ 
+            $seqStmt = $this->obconn->prepare("
+
+            SELECT nextval('plexecom_unique_sequence')
+
+        ");
+ 
+            $productStmt = $this->obconn->prepare("
+
+            SELECT
+
+                tpldesc,
+
+                excisable,
+
+                warehouse,
+
+                otcode,
+
+                mc,
+
+                vc,
+
+                fc,
+
+                cos,
+
+                dealer_price
+
+            FROM product_master
+
+            WHERE tplcode = :tplcode
+
+            AND dpst = :dpst
+
+        ");
+ 
+            $hsnStmt = $this->obconn->prepare("
+
+            SELECT substr(replace(hsn,':',''),1,4) AS hsn
+
+            FROM elgi_item_master
+
+            WHERE item_code = :tplcode
+
+        ");
+ 
+            $insertStmt = $this->obconn->prepare("
+
+            INSERT INTO plexecom_customer_units
+
+            (
+
+                usr_name,
+
+                emp_code,
+
+                cuno,
+
+                cuname,
+
+                areacode,
+
+                pono,
+
+                indent_category,
+
+                indent_number,
+
+                indent_date,
+
+                transporter,
+
+                delterms_code,
+
+                delivery_date,
+
+                invaddr,
+
+                deladdr,
+
+                dpst,
+
+                tplcode,
+
+                price,
+
+                qty,
+
+                salestax_code,
+
+                sessionid,
+
+                paycode,
+
+                insby,
+
+                edi_cuno,
+
+                seqid,
+
+                status,
+
+                aoseries,
+
+                otcode,
+
+                warehouse,
+
+                edi_delivery_date,
+
+                edi_delivery_code,
+
+                tpldesc,
+
+                mc,
+
+                vc,
+
+                fc,
+
+                cos,
+
+                delivery_code,
+
+                frtamount,
+
+                company,
+
+                adrcode,
+
+                refno,
+
+                hsn,
+
+                state,
+
+                country,
+
+                edistatus,
+
+                edi_date
+
+            )
+
+            VALUES
+
+            (
+
+                :uname,
+
+                :emp_code,
+
+                :cuno,
+
+                :cname,
+
+                :area,
+
+                :pono,
+
+                :indcat,
+
+                :indno,
+
+                current_date,
+
+                :trans,
+
+                :delterms,
+
+                :deldate,
+
+                :invaddr,
+
+                :deladdr,
+
+                :dpst,
+
+                :tplcode,
+
+                :price,
+
+                :qty,
+
+                :taxcode,
+
+                :sid,
+
+                :paycode,
+
+                :insby,
+
+                :edi_cuno,
+
+                :seqid,
+
+                :status,
+
+                :aoseries,
+
+                :otcode,
+
+                :warehouse,
+
+                :edi_delivery_date,
+
+                :edi_delivery_code,
+
+                :tpldesc,
+
+                :mcval,
+
+                :vcval,
+
+                :fcval,
+
+                :cosval,
+
+                :shipto,
+
+                :frtamount,
+
+                :cmp,
+
+                :adrcode,
+
+                :refno,
+
+                :hsn,
+
+                :state,
+
+                :country,
+
+                :edistatus,
+
+                :edi_date
+
+            )
+
+        ");
+ 
+            // -----------------------------------------------------------------
+
+            // PROCESS CART
+
+            // -----------------------------------------------------------------
+ 
+            foreach ($cartItems as $item) {
+ 
+                $tplcode = $item['item_code'];
+ 
+                $productStmt->execute([
+
+                    ':tplcode' => $tplcode,
+
+                    ':dpst'    => $dpst
+
+                ]);
+ 
+                $product = $productStmt->fetch(PDO::FETCH_ASSOC);
+ 
+                if (!$product) {
+
+                    continue;
+
+                }
+ 
+                $seqStmt->execute();
+
+                $seqid = $seqStmt->fetchColumn();
+ 
+                $hsnStmt->execute([
+
+                    ':tplcode' => $tplcode
+
+                ]);
+ 
+                $hsn = $hsnStmt->fetchColumn();
+ 
+                $taxColumn = ($country == 'IND' && $state == 'TN')
+
+                    ? 'sgst'
+
+                    : 'igst';
+ 
+ 
+                $taxStmt = $this->obconn->prepare("SELECT {$taxColumn} AS taxcode FROM gst_hsn WHERE replace(hsn,':','') = :hsn AND company = :company");
+ 
+                $taxStmt->execute([
+
+                    ':hsn'     => $hsn,
+
+                    ':company' => $cmp
+
+                ]);
+ 
+                $taxcode = $taxStmt->fetchColumn();
+ 
+                if (in_array($indcat, [4, 6])) {
+
+                    $taxcode = ($state == 'TN')
+
+                        ? 'GSTAG05'
+
+                        : 'GSTAG62';
+
+                }
+ 
+                $indent_number =
+
+                    $div .
+
+                    substr($area, 2, 2) .
+
+                    'A' .
+
+                    $newIndno;
+ 
+                $success = $insertStmt->execute([
+
+                    ':uname'             => $this->userId,
+
+                    ':emp_code'          => "102464",
+
+                    ':cuno'              => $cuno,
+
+                    ':cname'             => '',
+
+                    ':area'              => $area,
+
+                    ':pono'              => $pono,
+
+                    ':indcat'            => $indcat,
+
+                    ':indno'             => $indent_number,
+
+                    ':trans'             => $trans,
+
+                    ':delterms'          => $delterms,
+
+                    ':deldate'           => date('d.m.Y'),
+
+                    ':invaddr'           => $invaddr,
+
+                    ':deladdr'           => $deladdr,
+
+                    ':dpst'              => $dpst,
+
+                    ':tplcode'           => $tplcode,
+
+                    ':price'             => $item['total_amount'],
+
+                    ':qty'               => $item['qty'],
+
+                    ':taxcode'           => $taxcode,
+
+                    ':sid'               => $sid,
+
+                    ':paycode'           => $paycode,
+
+                    ':insby'             => '',
+
+                    ':edi_cuno'          => $cuno,
+
+                    ':seqid'             => $seqid,
+
+                    ':status'            => 'A',
+
+                    ':aoseries'          => $aoseries,
+
+                    ':otcode'            => '611',
+
+                    ':warehouse'         => $product['warehouse'],
+
+                    ':edi_delivery_date' => date('d.m.Y'),
+
+                    ':edi_delivery_code' => $deladdr,
+
+                    ':tpldesc'           => pg_escape_string($product['tpldesc']),
+
+                    ':mcval'             => $product['mc'],
+
+                    ':vcval'             => $product['vc'],
+
+                    ':fcval'             => $product['fc'],
+
+                    ':cosval'            => $product['cos'],
+
+                    ':shipto'            => $addrCode,
+
+                    ':frtamount'         => null,
+
+                    ':cmp'               => $cmp,
+
+                    ':adrcode'           => $adrcode,
+
+                    ':refno'             => $refno,
+
+                    ':hsn'               => "80:11:545",
+
+                    ':state'             => $state,
+
+                    ':country'           => $country,
+
+                    ':edistatus'         => 'Y',
+
+                    ':edi_date'          => date('d.m.Y')
+
+                ]);
+ 
+                if (!$success) {
+
+                    throw new Exception("Failed to insert order item");
+
+                }
+
+            }
+ 
+            // -----------------------------------------------------------------
+
+            // CLEAR CART
+
+            // -----------------------------------------------------------------
+ 
+            $deleteStmt = $this->obconn->prepare("
+
+            DELETE FROM tbl_vayu_cartitems
+
+            WHERE created_by = :createdBy
+
+            AND status = 0
+
+        ");
+ 
+            $deleteStmt->execute([
+
+                ':createdBy' => $this->userId
+
+            ]);
+ 
+            $this->obconn->commit();
+ 
+            return json_encode([
+
+                'status'   => 'success',
+
+                'order_no' => $refno
+
+            ]);
+
+        } catch (Exception $e) {
+ 
+            if ($this->obconn->inTransaction()) {
+
+                $this->obconn->rollBack();
+
+            }
+ 
+            error_log(
+
+                "[" . date('Y-m-d H:i:s') . "] " .
+
+                    "User: {$this->userId} | " .
+
+                    "Error: {$e->getMessage()} | " .
+
+                    "Line: {$e->getLine()}"
+
+            );
+ 
+            return json_encode([
+
+                'status'  => 'error',
+
+                'message' => $e->getMessage() . $e->getLine()
+
+            ]);
+
+        }
+
+    }
+
+ 
+
     private function generateOrderNo()
     {
 
