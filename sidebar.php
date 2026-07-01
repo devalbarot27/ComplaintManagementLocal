@@ -379,3 +379,6 @@ mobileClose.addEventListener('click', function () {
     sidebar.classList.remove('mobile-show');
 });
 </script>
+<?php if (!empty($_SESSION['usr_name'])): ?>
+<script src="js/session_tab_tracker.js"></script>
+<?php endif; ?>

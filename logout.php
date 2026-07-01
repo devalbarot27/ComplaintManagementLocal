@@ -1,25 +1,9 @@
 <?php
 session_start();
 
-include 'includes/login_helpers.php';
+require_once __DIR__ . '/includes/login_helpers.php';
 
-$_SESSION = [];
-
-if (ini_get('session.use_cookies')) {
-    $params = session_get_cookie_params();
-    setcookie(
-        session_name(),
-        '',
-        time() - 42000,
-        $params['path'],
-        $params['domain'],
-        $params['secure'],
-        $params['httponly']
-    );
-}
-
-session_destroy();
-login_clear_remember_cookie();
+login_destroy_session();
 
 header('Location: login.php');
 exit;
