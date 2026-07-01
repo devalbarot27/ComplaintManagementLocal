@@ -42,7 +42,7 @@ $dispatchesDeliveredThisWeekAlert = dashboard_format_dispatches_delivered_this_w
     $dashboardStats['dispatches_delivered_this_week_count']
 );
 //$totalOrdersCount = $dashboardStats['total_orders_count'];
-$totalOrdersCount = $totalCreatedOrdersCount + $acknowledgementCount + $pendingOrdersCount + $dispatched_orders_count;
+$totalOrdersCount = $totalCreatedOrdersCount;
 
 $monthlyChartData = $dashboardStats['monthly_chart'];
 $monthlyChartMax = max(

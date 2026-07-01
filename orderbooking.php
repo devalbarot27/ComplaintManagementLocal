@@ -310,6 +310,14 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
         'endCustomerState'
     ];
 
+    function isValidEmailAddress(email) {
+        const value = String(email || '').trim();
+        if (!value) {
+            return false;
+        }
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    }
+
     function setEndCustomerRequired(isRequired) {
         endCustomerFieldIds.forEach(function (fieldId) {
             const field = document.getElementById(fieldId);
@@ -656,7 +664,7 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
         } else {
             fields.push(
                 {
-                    value: $("#endCustomerEmail").val(),
+                    value: $("#endCustomerEmail").val().trim(),
                     message: "Please enter email"
                 },
                 {
@@ -689,6 +697,16 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
                 return;
             }
         }
+
+        if (deliveryAddressType == "2") {
+            const endCustomerEmail = $("#endCustomerEmail").val().trim();
+            if (!isValidEmailAddress(endCustomerEmail)) {
+                alert("Please enter a valid email address");
+                $("#endCustomerEmail").focus();
+                return;
+            }
+        }
+
         data = {
             dpst: dpst,
             orderCategory: orderCategory,
