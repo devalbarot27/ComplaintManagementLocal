@@ -1,8 +1,8 @@
 <?php
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/includes/login_helpers.php';
+
+login_bootstrap_session();
 
 if (empty($_SESSION['usr_name'])) {
     header('Location: login.php');
