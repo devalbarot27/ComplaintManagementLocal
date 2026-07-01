@@ -62,7 +62,7 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
             <div class="order-form-card" id="orderFormCard">
                 <div class="order-form-grid" id="orderBookingForm">
                     <div class="form-group">
-                        <label>Dpst</label>
+                        <label>Dpst <span class="text-danger">*</span></label>
                         <select class="form-control" id="dpst">
                             <?php
                             $getDpst = $obconn->prepare("SELECT dpst FROM tbl_vayu_dpst_master WHERE status=1");
@@ -78,7 +78,7 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Order Category</label>
+                        <label>Order Category <span class="text-danger">*</span></label>
                         <select class="form-control" id="orderCategory">
                             <option value="">Select</option>
                             <?php
@@ -94,7 +94,7 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Area</label>
+                        <label>Area <span class="text-danger">*</span></label>
                         <?php
                         $rs = $obconn->prepare("SELECT * FROM area WHERE area_code IN('011','012','013','014','021','022','023','024','031','032','033','034','035','036','041','042','043','045','051','052','053','054','058')");
                         $rs->execute();
@@ -109,15 +109,15 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>PO Number</label>
+                        <label>PO Number <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="pono" placeholder="PO Number" />
                     </div>
                     <div class="form-group">
-                        <label>Delivery Date</label>
+                        <label>Delivery Date <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="dDate" placeholder="Delivery Date" />
                     </div>
                     <div class="form-group">
-                        <label>Delivery Term</label>
+                        <label>Delivery Term <span class="text-danger">*</span></label>
                         <select class="form-control" id="deliveryTerm">
                             <option value="">Select</option>
                             <option value='003'>FREIGHT PAID - D/D AGST. C/C</option>
@@ -138,7 +138,7 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Payment Term</label>
+                        <label>Payment Term <span class="text-danger">*</span></label>
                         <select class="form-control" id="paymentTerm">
                             <option value="">Select</option>
                             <?php
@@ -154,7 +154,7 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
                     </div>
 
                     <div class="form-group">
-                        <label>Transporter</label>
+                        <label>Transporter <span class="text-danger">*</span></label>
                         <select class="form-control" id="transporter">
                             <option value="">Select</option>
                             <?php
@@ -178,7 +178,7 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
                     </div>
 
                     <div class="form-group">
-                        <label>Delivery Address</label>
+                        <label>Delivery Address <span class="text-danger">*</span></label>
                         <select class="form-control" id="deliveryAddressType" onchange="changeAddressType(this.value)">
                             <option value="1">Dealer</option>
                             <option value="2">End Customer</option>
@@ -187,7 +187,7 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
 
                     <div id="dealerAddressDiv" class="is-visible">
                         <div class="form-group">
-                            <label>Dealer Address</label>
+                            <label>Dealer Address <span class="text-danger">*</span></label>
                             <select class="form-control" id="customer_master">
                                 <option value="">Select</option>
                             </select>
@@ -196,13 +196,13 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
 
                     <div id="endCustomerAddressDiv">
                         <div class="form-group">
-                            <label>Email</label>
+                            <label>Email <span class="text-danger">*</span></label>
                             <input type="email" class="form-control" id="endCustomerEmail" name="end_customer_email"
                                 placeholder="Email" autocomplete="email">
                         </div>
 
                         <div class="form-group">
-                            <label>Street 1</label>
+                            <label>Street 1 <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="endCustomerStreet1" name="street_1"
                                 placeholder="Street 1" maxlength="255">
                         </div>
@@ -214,7 +214,7 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
                         </div>
 
                         <div class="form-group">
-                            <label>Pincode</label>
+                            <label>Pincode <span class="text-danger">*</span></label>
                             <select class="form-control" name="pincode" id="orderBookingPincodeSelect"
                                 data-placeholder="Search pincode">
                                 <option value=""></option>
@@ -222,19 +222,19 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
                         </div>
 
                         <div class="form-group">
-                            <label>City</label>
+                            <label>City <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="city" id="endCustomerCity"
                                 placeholder="Auto-filled from pincode" maxlength="100" readonly>
                         </div>
 
                         <div class="form-group">
-                            <label>District</label>
+                            <label>District <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="district" id="endCustomerDistrict"
                                 placeholder="Auto-filled from pincode" maxlength="100" readonly>
                         </div>
 
                         <div class="form-group">
-                            <label>State</label>
+                            <label>State <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="state" id="endCustomerState"
                                 placeholder="Auto-filled from pincode" maxlength="100" readonly>
                         </div>
@@ -244,14 +244,14 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
             <div class="order-form-card" id="orderFormCard">
                 <div class="order-form-grid">
                     <div class="form-group">
-                        <label>Product</label>
+                        <label>Product <span class="text-danger">*</span></label>
                         <select class="custom-input" id="item" onchange="enableBtn()">
                             <option>Select a product</option>
                         </select>
                     </div>
 
                     <div class="form-group">
-                        <label>Quantity</label>
+                        <label>Quantity <span class="text-danger">*</span></label>
                         <input type="number" class="custom-input" value="1" id="qty">
                     </div>
 
@@ -671,7 +671,7 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
             );
         }
         // END ADDRESS VALIDATION 01-07-26  
-        
+
         for (const field of fields) {
             if (!field.value) {
                 alert(field.message);
