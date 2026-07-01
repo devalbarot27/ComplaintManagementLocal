@@ -736,6 +736,13 @@ class orderClass
             $dpst      = "90092";
             $pono      = $_POST['pono'];
             $frtamount = $_POST['freightAmount'] ?? null;
+            $email     = trim($_POST['end_customer_email'] ?? ''); // Added new field 01-07-26
+            $street1   = trim($_POST['street_1'] ?? ''); // Added new field 01-07-26
+            $street2   = trim($_POST['street_2'] ?? ''); // Added new field 01-07-26
+            $city      = trim($_POST['city'] ?? ''); // Added new field 01-07-26
+            $addressState = trim($_POST['state'] ?? ''); // Added new field 01-07-26
+            $district  = trim($_POST['district'] ?? ''); // Added new field 01-07-26
+            $pincode   = trim($_POST['pincode'] ?? ''); // Added new field 01-07-26
 
             $this->obconn->beginTransaction();
 
@@ -833,7 +840,27 @@ class orderClass
 
             $adrcode = $customer['adr_code'];
             $country = trim($customer['country']);
-            $invaddr = pg_escape_string($customer['custaddr']);
+            $hasEndCustomerAddress = ( // Added new field 01-07-26
+                $street1 !== '' || // Added new field 01-07-26
+                $street2 !== '' || // Added new field 01-07-26
+                $city !== '' || // Added new field 01-07-26
+                $addressState !== '' || // Added new field 01-07-26
+                $district !== '' || // Added new field 01-07-26
+                $pincode !== '' // Added new field 01-07-26
+            ); // Added new field 01-07-26
+
+            if ($hasEndCustomerAddress) { // Added new field 01-07-26
+                $invaddr = pg_escape_string( // Added new field 01-07-26
+                    $street1 . '<br> - <br>' . // Added new field 01-07-26
+                    $street2 . '<br> - <br>' . // Added new field 01-07-26
+                    $city . '<br> - <br>' . // Added new field 01-07-26
+                    $addressState . '<br> - <br>' . // Added new field 01-07-26
+                    $district . '<br> - <br>' . // Added new field 01-07-26
+                    $pincode // Added new field 01-07-26
+                ); // Added new field 01-07-26
+            } else { // Added new field 01-07-26
+                $invaddr = pg_escape_string($customer['custaddr']); // Added new field 01-07-26
+            } // Added new field 01-07-26
 
            
 
@@ -891,8 +918,11 @@ class orderClass
                 transporter,
                 delterms_code,
                 delivery_date,
-                invaddr,
-                deladdr,
+                invaddr,"
+            . "email,\n" // Added new field 01-07-26
+            . "pincode,\n" // Added new field 01-07-26
+            . "district,\n" // Added new field 01-07-26
+            . "deladdr,
                 dpst,
                 tplcode,
                 price,
@@ -939,8 +969,11 @@ class orderClass
                 :trans,
                 :delterms,
                 :deldate,
-                :invaddr,
-                :deladdr,
+                :invaddr,"
+            . ":email,\n" // Added new field 01-07-26
+            . ":pincode,\n" // Added new field 01-07-26
+            . ":district,\n" // Added new field 01-07-26
+            . ":deladdr,
                 :dpst,
                 :tplcode,
                 :price,
@@ -1042,6 +1075,9 @@ class orderClass
                     ':delterms'          => $delterms,
                     ':deldate'           => date('d.m.Y'),
                     ':invaddr'           => $invaddr,
+                    ':email'             => $email, // Added new field 01-07-26
+                    ':pincode'           => $pincode, // Added new field 01-07-26
+                    ':district'          => $district, // Added new field 01-07-26
                     ':deladdr'           => $deladdr,
                     ':dpst'              => $dpst,
                     ':tplcode'           => $tplcode,
@@ -1070,7 +1106,7 @@ class orderClass
                     ':adrcode'           => $adrcode,
                     ':refno'             => $refno,
                     ':hsn'               => "80:11:545",
-                    ':state'             => $state,
+                    ':state'             => $addressState !== '' ? $addressState : $state, // Added new field 01-07-26
                     ':country'           => $country,
                     ':edistatus'         => 'Y',
                     ':edi_date'          => date('d.m.Y')
