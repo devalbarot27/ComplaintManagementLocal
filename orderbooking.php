@@ -598,44 +598,80 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
         var area = ($("#areaCode").val() || "").trim();
         var ddate = $("#dDate").val().trim();
         var pono = $("#pono").val().trim();
-        const fields = [{
-                value: dpst,
-                message: "Please enter a dpst"
+        const fields = [
+            { 
+                value: dpst, 
+                message: "Please enter a dpst" 
             },
-            {
-                value: orderCategory,
-                message: "Please select a order category"
+            { 
+                value: orderCategory, 
+                message: "Please select a order category" 
             },
-            {
-                value: addressCode,
-                message: "Please select a address"
+            { 
+                value: deliveryTerm, 
+                message: "Please select a delivery term" 
             },
-            {
-                value: deliveryTerm,
-                message: "Please select a delivery term"
+            { 
+                value: paymentTerm, 
+                message: "Please select a payment term" 
             },
-            {
-                value: paymentTerm,
-                message: "Please select a payment term"
+            { 
+                value: transporter, 
+                message: "Please select a transporter" 
             },
-            {
-                value: transporter,
-                message: "Please select a transporter"
+            { 
+                value: area, 
+                message: "Please select area" 
             },
-            {
-                value: area,
-                message: "Please select area"
+            { 
+                value: ddate, 
+                message: "Please select delivery date" 
             },
-            {
-                value: ddate,
-                message: "Please select delivery date"
-            },
-            {
-                value: pono,
-                message: "Please enter pono"
+            { 
+                value: pono, 
+                message: "Please enter pono" 
             },
         ];
 
+        // Added validation 01-07-26
+        const deliveryAddressType = $("#deliveryAddressType").val();
+
+        // Added validation 01-07-26
+        if (deliveryAddressType == "1") {
+            fields.push({
+                value: addressCode,
+                message: "Please select an address"
+            });
+        } else {
+            fields.push(
+                {
+                    value: $("#endCustomerEmail").val(),
+                    message: "Please enter email"
+                },
+                {
+                    value: $("#endCustomerStreet1").val(),
+                    message: "Please enter street 1"
+                },
+                {
+                    value: $("#orderBookingPincodeSelect").val(),
+                    message: "Please select pincode"
+                },
+                {
+                    value: $("#endCustomerCity").val(),
+                    message: "Please enter city"
+                },
+                {
+                    value: $("#endCustomerDistrict").val(),
+                    message: "Please enter district"
+                },
+                {
+                    value: $("#endCustomerState").val(),
+                    message: "Please enter state"
+                }
+            );
+        }
+        // END ADDRESS VALIDATION 01-07-26  
+        
         for (const field of fields) {
             if (!field.value) {
                 alert(field.message);
