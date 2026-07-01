@@ -689,8 +689,19 @@ if (!rbac_user_can($obconn, 'order-booking', 'create-order')) {
             area: area,
             pono: pono,
             ddate: ddate,
+            deliveryAddressType: deliveryAddressType,
             action: "submitCart"
         };
+
+        if (deliveryAddressType == "2") {
+            data.end_customer_email = $("#endCustomerEmail").val().trim();
+            data.street_1 = $("#endCustomerStreet1").val().trim();
+            data.street_2 = $("#endCustomerStreet2").val().trim();
+            data.pincode = ($("#orderBookingPincodeSelect").val() || "").trim();
+            data.city = $("#endCustomerCity").val().trim();
+            data.district = $("#endCustomerDistrict").val().trim();
+            data.state = $("#endCustomerState").val().trim();
+        }
         $.ajax({
             url: 'orderRequest.php',
             type: 'POST',

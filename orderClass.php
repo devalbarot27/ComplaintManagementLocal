@@ -728,14 +728,14 @@ class orderClass
 
             $addrCode  = $_POST['addressCode'];
             $area      = $_POST['area'];
-            $indcat    = $_POST['orderCategory'];
+            $indcat    = (int) ($_POST['orderCategory'] ?? 0);
             $deladdr   = strtoupper($_POST['addressCode']);
             $trans     = $_POST['transporter'];
             $delterms  = $_POST['deliveryTerm'];
             $paycode   = $_POST['paymentTerm'];
             $dpst      = "90092";
             $pono      = $_POST['pono'];
-            $frtamount = $_POST['freightAmount'] ?? null;
+            $frtamount = (isset($_POST['freightAmount']) && $_POST['freightAmount'] !== '') ? $_POST['freightAmount'] : null;
             $email     = trim($_POST['end_customer_email'] ?? ''); // Added new field 01-07-26
             $street1   = trim($_POST['street_1'] ?? ''); // Added new field 01-07-26
             $street2   = trim($_POST['street_2'] ?? ''); // Added new field 01-07-26
@@ -743,6 +743,13 @@ class orderClass
             $addressState = trim($_POST['state'] ?? ''); // Added new field 01-07-26
             $district  = trim($_POST['district'] ?? ''); // Added new field 01-07-26
             $pincode   = trim($_POST['pincode'] ?? ''); // Added new field 01-07-26
+            $emailValue = ($email !== '') ? $email : null; // Added new field 01-07-26
+            $pincodeValue = ($pincode !== '') ? $pincode : null; // Added new field 01-07-26
+            $districtValue = ($district !== '') ? $district : null; // Added new field 01-07-26
+
+            if ($indcat <= 0) {
+                throw new Exception('Order category is required.');
+            }
 
             $this->obconn->beginTransaction();
 
@@ -1075,9 +1082,9 @@ class orderClass
                     ':delterms'          => $delterms,
                     ':deldate'           => date('d.m.Y'),
                     ':invaddr'           => $invaddr,
-                    ':email'             => $email, // Added new field 01-07-26
-                    ':pincode'           => $pincode, // Added new field 01-07-26
-                    ':district'          => $district, // Added new field 01-07-26
+                    ':email'             => $emailValue, // Added new field 01-07-26
+                    ':pincode'           => $pincodeValue, // Added new field 01-07-26
+                    ':district'          => $districtValue, // Added new field 01-07-26
                     ':deladdr'           => $deladdr,
                     ':dpst'              => $dpst,
                     ':tplcode'           => $tplcode,
@@ -1096,12 +1103,12 @@ class orderClass
                     ':edi_delivery_date' => date('d.m.Y'),
                     ':edi_delivery_code' => $deladdr,
                     ':tpldesc'           => pg_escape_string($product['tpldesc']),
-                    ':mcval'             => $product['mc'],
-                    ':vcval'             => $product['vc'],
-                    ':fcval'             => $product['fc'],
-                    ':cosval'            => $product['cos'],
+                    ':mcval'             => ($product['mc'] === '' || $product['mc'] === null) ? null : $product['mc'],
+                    ':vcval'             => ($product['vc'] === '' || $product['vc'] === null) ? null : $product['vc'],
+                    ':fcval'             => ($product['fc'] === '' || $product['fc'] === null) ? null : $product['fc'],
+                    ':cosval'            => ($product['cos'] === '' || $product['cos'] === null) ? null : $product['cos'],
                     ':shipto'            => $addrCode,
-                    ':frtamount'         => null,
+                    ':frtamount'         => $frtamount,
                     ':cmp'               => $cmp,
                     ':adrcode'           => $adrcode,
                     ':refno'             => $refno,
