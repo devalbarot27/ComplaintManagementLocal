@@ -1,9 +1,8 @@
 <?php
-ini_set('display_errors', 1);
-if (session_status() === PHP_SESSION_NONE) {
+if(session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-
+  
 include('pdo_obconn.php');
 class orderClass
 {
@@ -11,21 +10,20 @@ class orderClass
     private $userId;
     private $obconn;
     private $dpconn;
-    private $customer_code;
 
     public function __construct($obconn, $dpconn)
     {
 
         $this->obconn = $obconn;
         $this->dpconn = $dpconn;
-        $this->userId = $_SESSION['usr_name'];
-        $this->customer_code = $_SESSION['customer_number_vayu'] ?? $_SESSION['usr_name'];
+        // $this->userId = $_SESSION['usr_name'];
+        $this->userId = "CU1A03751";
     }
 
     public function getCartCount()
     {
         $cnt = $this->obconn->prepare("SELECT * FROM tbl_vayu_item_master WHERE status=0 AND created_by=:createdBy");
-        $cnt->bindParam(':createdBy', $this->customer_code, PDO::PARAM_STR);
+        $cnt->bindParam(':createdBy', $this->userId, PDO::PARAM_STR);
         $cnt->execute();
         return $cnt->rowCount();
     }
@@ -215,7 +213,7 @@ class orderClass
                 return 0;
             }
             $stmt = $this->obconn->prepare("SELECT qty FROM tbl_vayu_cartitems WHERE created_by = :createdBy AND status = 0 AND item_code = :item_code");
-            $stmt->bindValue(':createdBy', $this->customer_code);
+            $stmt->bindValue(':createdBy', $this->userId);
             $stmt->bindValue(':item_code', $item_code);
             $stmt->execute();
             $item = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -241,7 +239,7 @@ class orderClass
                 $update->bindValue(':qty', $updatedQty);
                 $update->bindValue(':price', $price);
                 $update->bindValue(':totalAmount', $totalAmount);
-                $update->bindValue(':createdBy', $this->customer_code);
+                $update->bindValue(':createdBy', $this->userId);
                 $update->bindValue(':item_code', $item_code);
                 return $update->execute() ? 1 : 0;
             }
@@ -254,7 +252,7 @@ class orderClass
     public function getCartItems()
     {
         $chkItem = $this->obconn->prepare("SELECT * FROM tbl_vayu_cartitems WHERE created_by = :createdBy AND status = 0");
-        $chkItem->bindParam(':createdBy', $this->customer_code, PDO::PARAM_STR);
+        $chkItem->bindParam(':createdBy', $this->userId, PDO::PARAM_STR);
         $chkItem->execute();
 
         if ($chkItem->rowCount() == 0) {
@@ -372,22 +370,12 @@ class orderClass
         $paycode   = $_POST['paymentTerm'];
         $dpst      = "90092";
         $pono      = $_POST['pono'];
-        $frtamount = $_POST['freightAmount'] ?? 0;
+        $frtamount = $_POST['freightAmount'] ?? null;
         $cmp      = "401";
-        $cuno     = $this->customer_code;
+        $cuno     = "CU1A03751";
         $aoseries = "201";
         $state    = "TN";
         $sid      = session_id();
-        $email     = trim($_POST['end_customer_email'] ?? ''); // Added new field 01-07-26
-        $street1   = trim($_POST['street_1'] ?? ''); // Added new field 01-07-26
-        $street2   = trim($_POST['street_2'] ?? ''); // Added new field 01-07-26
-        $city      = trim($_POST['city'] ?? ''); // Added new field 01-07-26
-        $addressState = trim($_POST['state'] ?? ''); // Added new field 01-07-26
-        $district  = trim($_POST['district'] ?? ''); // Added new field 01-07-26
-        $pincode   = trim($_POST['pincode'] ?? ''); // Added new field 01-07-26
-        $emailValue = ($email !== '') ? $email : null; // Added new field 01-07-26
-        $pincodeValue = ($pincode !== '') ? $pincode : null; // Added new field 01-07-26
-        $districtValue = ($district !== '') ? $district : null; // Added new field 01-07-26
 
         $bearerToken = $this->getBearerTokenLN();
         if ($bearerToken) {
@@ -397,7 +385,7 @@ class orderClass
 
                 $addrCode  = $_POST['addressCode'];
                 $area      = $_POST['area'];
-                $indcat1    = $_POST['orderCategory'];
+                // $indcat    = $_POST['orderCategory'];
                 $indcat = "Normal Order";
                 $deladdr   = strtoupper($_POST['addressCode']);
                 $trans     = $_POST['transporter'];
@@ -406,7 +394,7 @@ class orderClass
                 $paycode   = $_POST['paymentTerm'];
                 $dpst      = "90092";
                 $pono      = $_POST['pono'];
-                $frtamount = (isset($_POST['freightAmount']) && $_POST['freightAmount'] !== '') ? $_POST['freightAmount'] : null;
+                $frtamount = $_POST['freightAmount'] ?? null;
 
                 $this->obconn->beginTransaction();
 
@@ -458,12 +446,13 @@ class orderClass
                 }
 
                 $number   = str_pad($number, 2, "0", STR_PAD_LEFT);
-                $newIndno = $indcat1 . 'N' . $letter . $number;
+                $newIndno = $indcat . 'N' . $letter . $number;
 
                 $cmp      = "401";
-                $aoseries = "501";
+                $cuno     = "CU1A03751";
+                $aoseries = "201";
                 $state    = "TN";
-
+                $sid      = session_id();
 
                 $customerStmt = $this->obconn->prepare("SELECT cm.adr_code, cm.country,ca.custaddr FROM customer_master cm LEFT JOIN customer_address ca ON ca.adr_code = cm.adr_code AND ca.cuno = cm.cuno WHERE cm.cuno=:cuno ");
                 $customerStmt->execute([
@@ -476,11 +465,11 @@ class orderClass
 
                 $dpstStmt = $this->obconn->prepare("SELECT product_group FROM dpst_master WHERE dpst_code = :dpst");
 
-                $dpstStmt->execute([':dpst' => $dpst]);
+                $dpstStmt->execute([
+                    ':dpst' => $dpst
+                ]);
 
                 $div = $dpstStmt->fetchColumn();
-
-                $indent_number = $div . substr($area, 2, 2) . 'A' . $newIndno;
 
                 $seqStmt = $this->obconn->prepare("SELECT nextval('plexecom_unique_sequence')");
 
@@ -508,7 +497,7 @@ class orderClass
                             <LogicalID>lid://infor.ims.mscrm</LogicalID>
                             <ComponentID>crm</ComponentID> 
                             <ConfirmationCode>OnError</ConfirmationCode>
-                        </Sender><CreationDateTime>" . $datetime . "</CreationDateTime><BODID>infor-nid:infor.ln:401::" . $refno . ":?SalesOrder&amp;verb=Sync</BODID>
+                        </Sender><CreationDateTime>" . $datetime . "</CreationDateTime><BODID>infor-nid:infor.ln:401::ORD-248777-J1W0H5:?SalesOrder&amp;verb=Sync</BODID>
                     </ApplicationArea>
                     <DataArea>
                         <Process>
@@ -524,7 +513,7 @@ class orderClass
                     <DocumentID agencyRole='Supplier'>
                         <ID>" . $refno . "</ID>
                     </DocumentID>
-                    <AlternateDocumentID agencyRole='Customer'><ID>" . $refno . "</ID></AlternateDocumentID>
+                    <AlternateDocumentID agencyRole='Customer'><ID>" . $cuno . "</ID></AlternateDocumentID>
                     <DocumentDateTime>" . $datetime . "</DocumentDateTime><Status><Code>Open</Code></Status>
                     <SupplierParty>
                     <Location type='Office'>
@@ -540,7 +529,7 @@ class orderClass
                             </PartyIDs>
                             <Location>
                             <Address type='Discrete'>
-                            <AttentionOfName>AIR POWER EQUIPMENTS</AttentionOfName>
+                            <AttentionOfName>" . $cuno . "</AttentionOfName>
                             <StreetName>Plot 1714/2, Industrial area</StreetName>
                             <BuildingName>Opp NHK forging,</BuildingName>
                             <Floor>Near Cheema chowk</Floor>
@@ -604,15 +593,16 @@ class orderClass
 
                     $seqStmt->execute();
 
-                    $seqid = $seqStmt->fetchColumn();
-
                     $hsnStmt->execute([
                         ':tplcode' => $tplcode
                     ]);
 
                     $hsn = $hsnStmt->fetchColumn();
 
-                    $taxColumn = ($country == 'IND' && $state == 'TN') ? 'sgst' : 'igst';
+                    $taxColumn = ($country == 'IND' && $state == 'TN')
+                        ? 'sgst'
+                        : 'igst';
+
 
                     $taxStmt = $this->obconn->prepare("SELECT {$taxColumn} AS taxcode FROM gst_hsn WHERE replace(hsn,':','') = :hsn AND company = :company");
 
@@ -657,134 +647,6 @@ class orderClass
                     </ShipFromParty>
                     </SalesOrderLine>";
                     $line += 10;
-
-                    $insertStmt = $this->obconn->prepare("INSERT INTO plexecom_customer_units(usr_name,emp_code,cuno,cuname,areacode,pono,indent_category,indent_number,indent_date,transporter,delterms_code,delivery_date,invaddr,email, pincode,district,deladdr,dpst,tplcode,price,qty,salestax_code,sessionid,paycode,insby,edi_cuno,seqid,status,aoseries,otcode,warehouse,edi_delivery_date,edi_delivery_code,tpldesc,mc,vc,fc,cos,delivery_code,frtamount,company,adrcode,refno,hsn,state,country,edistatus,edi_date)VALUES(:uname,:emp_code,:cuno,:cname,:area,:pono,:indcat,:indno,current_date,:trans,:delterms,:deldate,:invaddr,:email,:pincode,:district,:deladdr,:dpst,:tplcode,:price,:qty,:taxcode,:sid,:paycode,:insby,:edi_cuno,:seqid,:status,:aoseries,:otcode,:warehouse,:edi_delivery_date,:edi_delivery_code,:tpldesc,:mcval,:vcval,:fcval,:cosval,:shipto,:frtamount,:cmp,:adrcode,:refno,:hsn,:state,:country,:edistatus,:edi_date)");
-                    // $params = [
-                    //      ':uname'             => $this->userId,
-                    //                         ':emp_code'          => "102464",
-                    //                         ':cuno'              => $cuno,
-                    //                         ':cname'             => '',
-                    //                         ':area'              => $area,
-                    //                         ':pono'              => $pono,
-                    //                         ':indcat'            => $indcat1,
-                    //                         ':indno'             => $indent_number,
-                    //                         ':trans'             => $trans,
-                    //                         ':delterms'          => $delterms,
-                    //                         ':deldate'           => date('d.m.Y'),
-                    //                         ':invaddr'           => $invaddr,
-                    //                         ':email'             => $emailValue, 
-                    //                         ':pincode'           => $pincodeValue,
-                    //                         ':district'          => $districtValue,
-                    //                         ':deladdr'           => $deladdr,
-                    //                         ':dpst'              => $dpst,
-                    //                         ':tplcode'           => $tplcode,
-                    //                         ':price'             => $item['total_amount'],
-                    //                         ':qty'               => $item['qty'],
-                    //                         ':taxcode'           => $taxcode,
-                    //                         ':sid'               => $sid,
-                    //                         ':paycode'           => $paycode,
-                    //                         ':insby'             => '',
-                    //                         ':edi_cuno'          => $cuno,
-                    //                         ':seqid'             => $seqid,
-                    //                         ':status'            => 'A',
-                    //                         ':aoseries'          => $aoseries,
-                    //                         ':otcode'            => '511',
-                    //                         ':warehouse'         => $product['warehouse'],
-                    //                         ':edi_delivery_date' => date('d.m.Y'),
-                    //                         ':edi_delivery_code' => $deladdr,
-                    //                         ':tpldesc'           => pg_escape_string($product['tpldesc']),
-                    //                         ':mcval'             => ($product['mc'] === '' || $product['mc'] === null) ? null : $product['mc'],
-                    //                         ':vcval'             => ($product['vc'] === '' || $product['vc'] === null) ? null : $product['vc'],
-                    //                         ':fcval'             => ($product['fc'] === '' || $product['fc'] === null) ? null : $product['fc'],
-                    //                         ':cosval'            => ($product['cos'] === '' || $product['cos'] === null) ? null : $product['cos'],
-                    //                         ':shipto'            => $addrCode,
-                    //                         ':frtamount'         => $frtamount,
-                    //                         ':cmp'               => $cmp,
-                    //                         ':adrcode'           => $adrcode,
-                    //                         ':refno'             => $refno,
-                    //                         ':hsn'               => "80:11",
-                    //                         ':state'             => $addressState !== '' ? $addressState : $state,
-                    //                         ':country'           => $country,
-                    //                         ':edistatus'         => 'Y',
-                    //                         ':edi_date'          => date('d.m.Y')];
-
-                    //                         $sql = $insertStmt->queryString;
-
-                    // // Replace placeholders with actual values
-                    // foreach ($params as $key => $value) {
-                    //     if ($value === null) {
-                    //         $replacement = "NULL";
-                    //     } elseif (is_numeric($value)) {
-                    //         $replacement = $value;
-                    //     } else {
-                    //         $replacement = "'" . str_replace("'", "''", $value) . "'";
-                    //     }
-
-                    //     $sql = str_replace($key, $replacement, $sql);
-                    // }
-
-                    // echo "<pre>";
-                    // echo $sql;
-                    // echo "</pre>";
-                    // exit;
-
-                    $success = $insertStmt->execute([
-                        ':uname'             => $this->userId,
-                        ':emp_code'          => "102464",
-                        ':cuno'              => $cuno,
-                        ':cname'             => '',
-                        ':area'              => $area,
-                        ':pono'              => $pono,
-                        ':indcat'            => $indcat1,
-                        ':indno'             => $indent_number,
-                        ':trans'             => $trans,
-                        ':delterms'          => $delterms,
-                        ':deldate'           => date('d.m.Y'),
-                        ':invaddr'           => $invaddr,
-                        ':email'             => $emailValue,
-                        ':pincode'           => $pincodeValue,
-                        ':district'          => $districtValue,
-                        ':deladdr'           => $deladdr,
-                        ':dpst'              => $dpst,
-                        ':tplcode'           => $tplcode,
-                        ':price'             => $item['total_amount'],
-                        ':qty'               => $item['qty'],
-                        ':taxcode'           => $taxcode,
-                        ':sid'               => $sid,
-                        ':paycode'           => $paycode,
-                        ':insby'             => '',
-                        ':edi_cuno'          => $cuno,
-                        ':seqid'             => $seqid,
-                        ':status'            => 'A',
-                        ':aoseries'          => $aoseries,
-                        ':otcode'            => '511',
-                        ':warehouse'         => $product['warehouse'],
-                        ':edi_delivery_date' => date('d.m.Y'),
-                        ':edi_delivery_code' => $deladdr,
-                        ':tpldesc'           => pg_escape_string($product['tpldesc']),
-                        ':mcval'             => ($product['mc'] === '' || $product['mc'] === null) ? null : $product['mc'],
-                        ':vcval'             => ($product['vc'] === '' || $product['vc'] === null) ? null : $product['vc'],
-                        ':fcval'             => ($product['fc'] === '' || $product['fc'] === null) ? null : $product['fc'],
-                        ':cosval'            => ($product['cos'] === '' || $product['cos'] === null) ? null : $product['cos'],
-                        ':shipto'            => $addrCode,
-                        ':frtamount'         => $frtamount,
-                        ':cmp'               => $cmp,
-                        ':adrcode'           => $adrcode,
-                        ':refno'             => $refno,
-                        ':hsn'               => "80:11",
-                        ':state'             => $state,
-                        ':country'           => $country,
-                        ':edistatus'         => 'Y',
-                        ':edi_date'          => date('d.m.Y')
-                    ]);
-
-                    if (!$success) {
-                        $this->obconn->rollBack();
-                        return json_encode([
-                            'status'  => 'error',
-                            'message' => "Error in request"
-                        ]);
-                    }
                 }
                 $xml .= " </SalesOrder>
                 </DataArea>
@@ -796,107 +658,45 @@ class orderClass
                 </messageRequest>";
 
 
-                $url = "https://mingle-ionapi.eu1.inforcloudsuite.com/ELGI_TST/IONSERVICES/api/ion/messaging/service/v2/message";
-                // $ch = curl_init($url);
-                // curl_setopt_array($ch, [
-                //     CURLOPT_URL            => $url,
-                //     CURLOPT_RETURNTRANSFER => true,
-                //     CURLOPT_POST           => true,
-                //     CURLOPT_POSTFIELDS     => $xml,
-                //     CURLOPT_HTTPHEADER     => [
-                //         "Content-Type: application/xml; charset=UTF-8",
-                //         "Authorization: Bearer $bearerToken"
-                //     ],
-                //     CURLOPT_SSL_VERIFYPEER => true,
-                //     CURLOPT_SSL_VERIFYHOST => 2,
-                //     CURLOPT_CONNECTTIMEOUT => 30,
-                //     CURLOPT_TIMEOUT        => 60,
-                //     CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4
-                // ]);
-
-                $url = "https://mingle-ionapi.eu1.inforcloudsuite.com/ELGI_TST/IONSERVICES/api/ion/messaging/service/v2/message";
-
-                $maxRetries = 3;
-                $retryDelay = 1; // seconds
-
-                $ch = null;
-
-                for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
-
-                    $ch = curl_init();
-
-                    curl_setopt_array($ch, [
-                        CURLOPT_URL            => $url,
-                        CURLOPT_RETURNTRANSFER => true,
-                        CURLOPT_POST           => true,
-                        CURLOPT_POSTFIELDS     => $xml,
-                        CURLOPT_HTTPHEADER     => [
-                            "Content-Type: application/xml; charset=UTF-8",
-                            "Authorization: Bearer $bearerToken"
-                        ],
-                        CURLOPT_SSL_VERIFYPEER => true,
-                        CURLOPT_SSL_VERIFYHOST => 2,
-                        CURLOPT_CONNECTTIMEOUT => 30,
-                        CURLOPT_TIMEOUT        => 60,
-                        CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4
-                    ]);
-
-                    $response = curl_exec($ch);
-
-                    $errno    = curl_errno($ch);
-                    $error    = curl_error($ch);
-                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-                    curl_close($ch);
-
-                    // Success
-                    if ($errno == 0) {
-                        break;
-                    }
-
-                    error_log("Attempt {$attempt}: cURL Error {$errno} - {$error}");
-
-                    // Retry only for connection errors
-                    if ($errno == CURLE_COULDNT_CONNECT && $attempt < $maxRetries) {
-                        sleep($retryDelay);
-                        continue;
-                    }
-
-                    // Other errors or retries exhausted
-                    throw new Exception("cURL Error {$errno}: {$error}");
-                }
+                $url = "https://mingle-ionapi.eu1.inforcloudsuite.com:443/ELGI_TST/IONSERVICES/api/ion/messaging/service/v2/message";
+                $ch = curl_init($url);
+                curl_setopt_array($ch, [
+                    CURLOPT_URL            => $url,
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_POST           => true,
+                    CURLOPT_POSTFIELDS     => $xml,
+                    CURLOPT_HTTPHEADER     => [
+                        "Content-Type: application/xml; charset=UTF-8",
+                        "Authorization: Bearer $bearerToken"
+                    ],
+                    CURLOPT_SSL_VERIFYPEER => false,
+                    CURLOPT_SSL_VERIFYHOST => 2,
+                    CURLOPT_CONNECTTIMEOUT => 30,
+                    CURLOPT_TIMEOUT        => 60
+                ]);
 
 
                 $response = curl_exec($ch);
 
-
-                $errno    = curl_errno($ch);
-                $error    = curl_error($ch);
-                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-                curl_close($ch);
-
-
-                // Final result
-                if ($errno != 0) {
-                    return json_encode(["status" => ($data['message'] ?? 'Unknown error')]);
+                if ($response === false) {
+                    die('Curl Error: ' . curl_error($ch));
                 }
 
-
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 $data = json_decode($response, true);
 
                 $deleteStmt = $this->obconn->prepare("DELETE FROM tbl_vayu_cartitems WHERE created_by = :createdBy
             AND status = 0");
 
                 $deleteStmt->execute([
-                    ':createdBy' => $this->customer_code
+                    ':createdBy' => $this->userId
                 ]);
 
                 $this->obconn->commit();
 
                 if ($httpCode == 201 && isset($data['status']) && $data['status'] === 'OK') {
                     return json_encode([
-                        'status'   => "Order created - " . $refno,
+                        'status'   => 'Published successfully',
                     ]);
                 } else {
                     return json_encode(["status" => ($data['message'] ?? 'Unknown error')]);
@@ -980,7 +780,7 @@ class orderClass
         ");
 
             $cartStmt->execute([
-                ':createdBy' => $this->customer_code
+                ':createdBy' => $this->userId
             ]);
 
             $cartItems = $cartStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -1020,12 +820,12 @@ class orderClass
             $newIndno = $indcat . 'N' . $letter . $number;
 
             $cmp      = "401";
-            $cuno     = $this->customer_code;
+            $cuno     = "CU1A03751";
             $aoseries = "201";
             $state    = "TN";
             $sid      = session_id();
 
-
+          
 
             $customerStmt = $this->obconn->prepare("
             SELECT
@@ -1059,17 +859,17 @@ class orderClass
             if ($hasEndCustomerAddress) { // Added new field 01-07-26
                 $invaddr = pg_escape_string( // Added new field 01-07-26
                     $street1 . '<br> - <br>' . // Added new field 01-07-26
-                        $street2 . '<br> - <br>' . // Added new field 01-07-26
-                        $city . '<br> - <br>' . // Added new field 01-07-26
-                        $addressState . '<br> - <br>' . // Added new field 01-07-26
-                        $district . '<br> - <br>' . // Added new field 01-07-26
-                        $pincode // Added new field 01-07-26
+                    $street2 . '<br> - <br>' . // Added new field 01-07-26
+                    $city . '<br> - <br>' . // Added new field 01-07-26
+                    $addressState . '<br> - <br>' . // Added new field 01-07-26
+                    $district . '<br> - <br>' . // Added new field 01-07-26
+                    $pincode // Added new field 01-07-26
                 ); // Added new field 01-07-26
             } else { // Added new field 01-07-26
                 $invaddr = pg_escape_string($customer['custaddr']); // Added new field 01-07-26
             } // Added new field 01-07-26
 
-
+           
 
             $dpstStmt = $this->obconn->prepare("
             SELECT product_group
@@ -1126,10 +926,10 @@ class orderClass
                 delterms_code,
                 delivery_date,
                 invaddr,"
-                . "email,\n" // Added new field 01-07-26
-                . "pincode,\n" // Added new field 01-07-26
-                . "district,\n" // Added new field 01-07-26
-                . "deladdr,
+            . "email,\n" // Added new field 01-07-26
+            . "pincode,\n" // Added new field 01-07-26
+            . "district,\n" // Added new field 01-07-26
+            . "deladdr,
                 dpst,
                 tplcode,
                 price,
@@ -1177,10 +977,10 @@ class orderClass
                 :delterms,
                 :deldate,
                 :invaddr,"
-                . ":email,\n" // Added new field 01-07-26
-                . ":pincode,\n" // Added new field 01-07-26
-                . ":district,\n" // Added new field 01-07-26
-                . ":deladdr,
+            . ":email,\n" // Added new field 01-07-26
+            . ":pincode,\n" // Added new field 01-07-26
+            . ":district,\n" // Added new field 01-07-26
+            . ":deladdr,
                 :dpst,
                 :tplcode,
                 :price,
@@ -1312,7 +1112,7 @@ class orderClass
                     ':cmp'               => $cmp,
                     ':adrcode'           => $adrcode,
                     ':refno'             => $refno,
-                    ':hsn'               => "80:11",
+                    ':hsn'               => "80:11:545",
                     ':state'             => $state,
                     ':country'           => $country,
                     ':edistatus'         => 'Y',
@@ -1335,7 +1135,7 @@ class orderClass
         ");
 
             $deleteStmt->execute([
-                ':createdBy' => $this->customer_code
+                ':createdBy' => $this->userId
             ]);
 
             $this->obconn->commit();
@@ -1369,7 +1169,7 @@ class orderClass
     {
 
         try {
-
+ 
             $addrCode  = $_POST['addressCode'];
 
             $area      = $_POST['area'];
@@ -1389,9 +1189,9 @@ class orderClass
             $pono      = $_POST['pono'];
 
             $frtamount = $_POST['freightAmount'] ?? null;
-
+ 
             $this->obconn->beginTransaction();
-
+ 
             $rs = $this->obconn->prepare("select to_char(current_date,'YYMMDD') as ymd");
 
             $rs->execute();
@@ -1399,7 +1199,7 @@ class orderClass
             $getData = $rs->fetch(PDO::FETCH_ASSOC);
 
             $ymd = $getData['ymd'];
-
+ 
             $rs = $this->obconn->prepare("select nextval('dp_spares') as slno");
 
             $rs->execute();
@@ -1407,12 +1207,12 @@ class orderClass
             $getData = $rs->fetch(PDO::FETCH_ASSOC);
 
             $slno = $getData['slno'];
-
+ 
             $slno = str_pad($slno, 4, "0", STR_PAD_LEFT);
-
+ 
             $refno = "E/UNITS/" . $ymd . $slno;
-
-
+ 
+ 
             $cartStmt = $this->obconn->prepare("
 
             SELECT item_code,
@@ -1432,21 +1232,22 @@ class orderClass
             AND status = 0
 
         ");
-
+ 
             $cartStmt->execute([
 
                 ':createdBy' => $this->userId
 
             ]);
-
+ 
             $cartItems = $cartStmt->fetchAll(PDO::FETCH_ASSOC);
-
+ 
             if (empty($cartItems)) {
 
                 throw new Exception("Cart is empty.");
+
             }
-
-
+ 
+ 
             $stmt = $this->obconn->prepare("
 
             SELECT max(substr(indent_number,7,9)) AS maxindno
@@ -1458,37 +1259,39 @@ class orderClass
             AND indent_date >= '01.04.2022'
 
         ");
-
+ 
             $stmt->execute([
 
                 ':area' => $area
 
             ]);
-
+ 
             $maxIndno = $stmt->fetchColumn();
-
+ 
             $letter = substr($maxIndno, 0, 1);
 
             $number = substr($maxIndno, 1, 2);
-
+ 
             $letter = $letter ?: 'A';
 
             $number = $number ?: 0;
-
+ 
             if ($number == 99) {
 
                 $letter = chr(ord($letter) + 1);
 
                 $number = 1;
+
             } else {
 
                 $number++;
-            }
 
+            }
+ 
             $number   = str_pad($number, 2, "0", STR_PAD_LEFT);
 
             $newIndno = $indcat . 'N' . $letter . $number;
-
+ 
             $cmp      = "401";
 
             $cuno     = "CU1A03751";
@@ -1498,9 +1301,9 @@ class orderClass
             $state    = "TN";
 
             $sid      = session_id();
-
-
-
+ 
+          
+ 
             $customerStmt = $this->obconn->prepare("
 
             SELECT
@@ -1522,23 +1325,23 @@ class orderClass
             WHERE cm.cuno = :cuno
 
         ");
-
+ 
             $customerStmt->execute([
 
                 ':cuno' => $cuno
 
             ]);
-
+ 
             $customer = $customerStmt->fetch(PDO::FETCH_ASSOC);
-
+ 
             $adrcode = $customer['adr_code'];
 
             $country = trim($customer['country']);
 
             $invaddr = pg_escape_string($customer['custaddr']);
-
-
-
+ 
+           
+ 
             $dpstStmt = $this->obconn->prepare("
 
             SELECT product_group
@@ -1548,22 +1351,22 @@ class orderClass
             WHERE dpst_code = :dpst
 
         ");
-
+ 
             $dpstStmt->execute([
 
                 ':dpst' => $dpst
 
             ]);
-
+ 
             $div = $dpstStmt->fetchColumn();
-
-
+ 
+ 
             $seqStmt = $this->obconn->prepare("
 
             SELECT nextval('plexecom_unique_sequence')
 
         ");
-
+ 
             $productStmt = $this->obconn->prepare("
 
             SELECT
@@ -1593,7 +1396,7 @@ class orderClass
             AND dpst = :dpst
 
         ");
-
+ 
             $hsnStmt = $this->obconn->prepare("
 
             SELECT substr(replace(hsn,':',''),1,4) AS hsn
@@ -1603,7 +1406,7 @@ class orderClass
             WHERE item_code = :tplcode
 
         ");
-
+ 
             $insertStmt = $this->obconn->prepare("
 
             INSERT INTO plexecom_customer_units
@@ -1799,17 +1602,17 @@ class orderClass
             )
 
         ");
-
+ 
             // -----------------------------------------------------------------
 
             // PROCESS CART
 
             // -----------------------------------------------------------------
-
+ 
             foreach ($cartItems as $item) {
-
+ 
                 $tplcode = $item['item_code'];
-
+ 
                 $productStmt->execute([
 
                     ':tplcode' => $tplcode,
@@ -1817,35 +1620,36 @@ class orderClass
                     ':dpst'    => $dpst
 
                 ]);
-
+ 
                 $product = $productStmt->fetch(PDO::FETCH_ASSOC);
-
+ 
                 if (!$product) {
 
                     continue;
-                }
 
+                }
+ 
                 $seqStmt->execute();
 
                 $seqid = $seqStmt->fetchColumn();
-
+ 
                 $hsnStmt->execute([
 
                     ':tplcode' => $tplcode
 
                 ]);
-
+ 
                 $hsn = $hsnStmt->fetchColumn();
-
+ 
                 $taxColumn = ($country == 'IND' && $state == 'TN')
 
                     ? 'sgst'
 
                     : 'igst';
-
-
+ 
+ 
                 $taxStmt = $this->obconn->prepare("SELECT {$taxColumn} AS taxcode FROM gst_hsn WHERE replace(hsn,':','') = :hsn AND company = :company");
-
+ 
                 $taxStmt->execute([
 
                     ':hsn'     => $hsn,
@@ -1853,9 +1657,9 @@ class orderClass
                     ':company' => $cmp
 
                 ]);
-
+ 
                 $taxcode = $taxStmt->fetchColumn();
-
+ 
                 if (in_array($indcat, [4, 6])) {
 
                     $taxcode = ($state == 'TN')
@@ -1863,8 +1667,9 @@ class orderClass
                         ? 'GSTAG05'
 
                         : 'GSTAG62';
-                }
 
+                }
+ 
                 $indent_number =
 
                     $div .
@@ -1874,7 +1679,7 @@ class orderClass
                     'A' .
 
                     $newIndno;
-
+ 
                 $success = $insertStmt->execute([
 
                     ':uname'             => $this->userId,
@@ -1955,7 +1760,7 @@ class orderClass
 
                     ':refno'             => $refno,
 
-                    ':hsn'               => "80:11",
+                    ':hsn'               => "80:11:545",
 
                     ':state'             => $state,
 
@@ -1966,19 +1771,21 @@ class orderClass
                     ':edi_date'          => date('d.m.Y')
 
                 ]);
-
+ 
                 if (!$success) {
 
                     throw new Exception("Failed to insert order item");
-                }
-            }
 
+                }
+
+            }
+ 
             // -----------------------------------------------------------------
 
             // CLEAR CART
 
             // -----------------------------------------------------------------
-
+ 
             $deleteStmt = $this->obconn->prepare("
 
             DELETE FROM tbl_vayu_cartitems
@@ -1988,15 +1795,15 @@ class orderClass
             AND status = 0
 
         ");
-
+ 
             $deleteStmt->execute([
 
                 ':createdBy' => $this->userId
 
             ]);
-
+ 
             $this->obconn->commit();
-
+ 
             return json_encode([
 
                 'status'   => 'success',
@@ -2004,13 +1811,15 @@ class orderClass
                 'order_no' => $refno
 
             ]);
-        } catch (Exception $e) {
 
+        } catch (Exception $e) {
+ 
             if ($this->obconn->inTransaction()) {
 
                 $this->obconn->rollBack();
-            }
 
+            }
+ 
             error_log(
 
                 "[" . date('Y-m-d H:i:s') . "] " .
@@ -2022,7 +1831,7 @@ class orderClass
                     "Line: {$e->getLine()}"
 
             );
-
+ 
             return json_encode([
 
                 'status'  => 'error',
@@ -2030,10 +1839,12 @@ class orderClass
                 'message' => $e->getMessage() . $e->getLine()
 
             ]);
+
         }
+
     }
 
-
+ 
 
     private function generateOrderNo()
     {
@@ -2067,7 +1878,7 @@ class orderClass
         }
 
         $placeholders = [];
-        $params = [':cuno' => $this->customer_code];
+        $params = [':cuno' => $this->userId];
 
         foreach ($orderNumbers as $index => $orderNumber) {
             $paramKey = ':ordno' . $index;
@@ -2126,12 +1937,12 @@ class orderClass
 
 
             $totalQry = $this->dpconn->prepare("SELECT COUNT(*) FROM pendingordersnew p LEFT OUTER JOIN dpst_master dm ON TRIM(p.dpst) = dm.dpst_code::text LEFT JOIN tbl_commitment tc ON p.ordno = tc.orderno AND p.posno = tc.posno WHERE p.company != 600 and p.cuno=:uname");
-            $totalQry->bindParam(':uname', $this->customer_code, PDO::PARAM_STR);
+            $totalQry->bindParam(':uname', $this->userId, PDO::PARAM_STR);
             $totalQry->execute();
             $totalRecords = $totalQry->fetchColumn();
             $countSql = "SELECT COUNT(*) FROM pendingordersnew p LEFT OUTER JOIN dpst_master dm ON TRIM(p.dpst) = dm.dpst_code::text LEFT JOIN tbl_commitment tc ON p.ordno = tc.orderno AND p.posno = tc.posno WHERE p.company != 600 AND p.cuno=:uname {$where}";
             $countStmt = $this->dpconn->prepare($countSql);
-            $countStmt->bindParam(':uname', $this->customer_code, PDO::PARAM_STR);
+            $countStmt->bindParam(':uname', $this->userId, PDO::PARAM_STR);
             foreach ($params as $key => $value) {
                 $countStmt->bindValue($key, $value);
             }
@@ -2142,7 +1953,7 @@ class orderClass
 
             $stmt = $this->dpconn->prepare($sql);
 
-            $stmt->bindParam(':uname', $this->customer_code, PDO::PARAM_STR);
+            $stmt->bindParam(':uname', $this->userId, PDO::PARAM_STR);
 
             foreach ($params as $key => $value) {
                 $stmt->bindValue($key, $value);
@@ -2209,87 +2020,6 @@ class orderClass
         }
     }
 
-    public function getPendingOrderList_bk()
-    {
-        try {
-
-            $draw   = isset($_POST['draw']) ? (int)$_POST['draw'] : 0;
-            $start  = isset($_POST['start']) ? (int)$_POST['start'] : 0;
-            $length = isset($_POST['length']) ? (int)$_POST['length'] : 10;
-
-            $search = $_POST['search']['value'] ?? '';
-
-            $where = '';
-            $params = [];
-
-            if (!empty($search)) {
-                $where = "AND (ordno ILIKE :search)";
-                $params[':search'] = "%{$search}%";
-            }
-
-
-            $totalQry = $this->dpconn->prepare("SELECT COUNT(*) FROM pendingordersnew p LEFT OUTER JOIN dpst_master dm ON TRIM(p.dpst) = dm.dpst_code::text LEFT JOIN tbl_commitment tc ON p.ordno = tc.orderno AND p.posno = tc.posno WHERE p.company != 600 and p.cuno=:uname");
-            $totalQry->bindParam(':uname', $this->customer_code, PDO::PARAM_STR);
-            $totalQry->execute();
-            $totalRecords = $totalQry->fetchColumn();
-            $countSql = "SELECT COUNT(*) FROM pendingordersnew p LEFT OUTER JOIN dpst_master dm ON TRIM(p.dpst) = dm.dpst_code::text LEFT JOIN tbl_commitment tc ON p.ordno = tc.orderno AND p.posno = tc.posno WHERE p.company != 600 AND p.cuno=:uname {$where}";
-            $countStmt = $this->dpconn->prepare($countSql);
-            $countStmt->bindParam(':uname', $this->customer_code, PDO::PARAM_STR);
-            foreach ($params as $key => $value) {
-                $countStmt->bindValue($key, $value);
-            }
-            $countStmt->execute();
-            $filteredRecords = $countStmt->fetchColumn();
-
-            $sql = "SELECT cuno,cuname,ordno,orddt,itemcode,itemdesc,qty,unitvalue,currency,pono,dpst,dpst_desc,delydt,otcode,tbl_commitment.comm_dt FROM pendingordersnew LEFT OUTER JOIN dpst_master ON trim(dpst)=dpst_code::text LEFT JOIN tbl_commitment ON pendingordersnew.ordno=tbl_commitment.orderno AND pendingordersnew.posno=tbl_commitment.posno WHERE company!=600 AND cuno=:uname {$where} ORDER BY orddt DESC LIMIT :length OFFSET :start";
-
-            $stmt = $this->dpconn->prepare($sql);
-
-            $stmt->bindParam(':uname', $this->customer_code, PDO::PARAM_STR);
-
-            foreach ($params as $key => $value) {
-                $stmt->bindValue($key, $value);
-            }
-
-            $stmt->bindValue(':length', $length, PDO::PARAM_INT);
-            $stmt->bindValue(':start', $start, PDO::PARAM_INT);
-
-            $stmt->execute();
-
-            $data = [];
-
-            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-
-                $data[] = [
-                    'cuno'            => $row['cuno'],
-                    'pono'            => $row['pono'],
-                    'aono'             => $row['ordno'],
-                    'aodate'             => $row['orddt'],
-                    'delydt'         => date('d-m-Y', strtotime($row['delydt'])),
-                    'lines' => '<a href="order_data.php?order=' . urlencode($row['ordno']) .
-                        '&cuno=' . urlencode($row['cuno']) . '&reference=pending_order" target="_blank" style="text-decoration:none;">View</a>'
-                ];
-            }
-            return json_encode([
-                'draw'            => $draw,
-                'recordsTotal'    => (int)$totalRecords,
-                'recordsFiltered' => (int)$filteredRecords,
-                'data'            => $data
-            ]);
-        } catch (Exception $e) {
-
-            error_log($e->getMessage());
-
-            return json_encode([
-                'draw' => 0,
-                'recordsTotal' => 0,
-                'recordsFiltered' => 0,
-                'data' => [],
-                'error' => $e->getMessage() . $e->getLine()
-            ]);
-        }
-    }
-
     public function getOrderAcknowledgeList()
     {
         try {
@@ -2310,12 +2040,12 @@ class orderClass
 
 
             $totalQry = $this->dpconn->prepare("SELECT COUNT(*) FROM ( SELECT DISTINCT m.cuno,m.ordno,m.ord_date,m.purno,m.dpst,d.dpst_desc FROM maintdealer m  LEFT OUTER JOIN dpst_master d ON trim(m.dpst)=d.dpst_code::text WHERE  company!=600 AND cuno = :uname) x ");
-            $totalQry->bindParam(':uname', $this->customer_code, PDO::PARAM_STR);
+            $totalQry->bindParam(':uname', $this->userId, PDO::PARAM_STR);
             $totalQry->execute();
             $totalRecords = $totalQry->fetchColumn();
 
             $countStmt = $this->dpconn->prepare("SELECT COUNT(*) FROM (SELECT DISTINCT m.cuno,m.ordno,m.ord_date,m.purno,m.dpst,d.dpst_desc FROM maintdealer m  LEFT OUTER JOIN dpst_master d ON trim(m.dpst)=d.dpst_code::text WHERE  company!=600 AND cuno = :uname {$where}) x");
-            $countStmt->bindParam(':uname', $this->customer_code, PDO::PARAM_STR);
+            $countStmt->bindParam(':uname', $this->userId, PDO::PARAM_STR);
             $totalQry->execute();
             foreach ($params as $key => $value) {
                 $countStmt->bindValue($key, $value);
@@ -2327,7 +2057,7 @@ class orderClass
 
             $stmt = $this->dpconn->prepare($sql);
 
-            $stmt->bindParam(':uname', $this->customer_code, PDO::PARAM_STR);
+            $stmt->bindParam(':uname', $this->userId, PDO::PARAM_STR);
 
             foreach ($params as $key => $value) {
                 $stmt->bindValue($key, $value);
@@ -2370,7 +2100,7 @@ class orderClass
         }
     }
 
-    public function getRecentOrders()
+  public function getRecentOrders()
 
     {
 
@@ -2381,13 +2111,13 @@ class orderClass
             $start  = isset($_POST['start']) ? (int)$_POST['start'] : 0;
 
             $length = isset($_POST['length']) ? (int)$_POST['length'] : 10;
-
+ 
             $search = $_POST['search']['value'] ?? '';
-
+ 
             $where = '';
 
             $params = [];
-
+ 
             if (!empty($search)) {
 
                 $where = "AND (
@@ -2405,8 +2135,9 @@ class orderClass
                 )";
 
                 $params[':search'] = "%{$search}%";
-            }
 
+            }
+ 
             $joinSql = "
 
                 FROM plexecom_customer_units AS a
@@ -2432,7 +2163,7 @@ class orderClass
                 {$where}
 
             ";
-
+ 
             $totalQry = $this->obconn->prepare("
 
                 SELECT COUNT(DISTINCT refno)
@@ -2443,27 +2174,28 @@ class orderClass
 
             ");
 
-            $totalQry->bindParam(':createdBy', $this->customer_code, PDO::PARAM_STR);
+            $totalQry->bindParam(':createdBy', $this->userId, PDO::PARAM_STR);
 
             $totalQry->execute();
 
             $totalRecords = (int) $totalQry->fetchColumn();
-
+ 
             $countSql = "SELECT COUNT(*) FROM (SELECT DISTINCT a.refno {$joinSql}) recent_orders";
 
             $countStmt = $this->obconn->prepare($countSql);
 
-            $countStmt->bindParam(':createdBy', $this->customer_code, PDO::PARAM_STR);
+            $countStmt->bindParam(':createdBy', $this->userId, PDO::PARAM_STR);
 
             foreach ($params as $key => $value) {
 
                 $countStmt->bindValue($key, $value);
+
             }
 
             $countStmt->execute();
 
             $filteredRecords = (int) $countStmt->fetchColumn();
-
+ 
             $sql = "
 
                 SELECT DISTINCT ON (a.refno)
@@ -2491,24 +2223,25 @@ class orderClass
                 LIMIT :length OFFSET :start
 
             ";
-
+ 
             $stmt = $this->obconn->prepare($sql);
 
-            $stmt->bindParam(':createdBy', $this->customer_code, PDO::PARAM_STR);
-
+            $stmt->bindParam(':createdBy', $this->userId, PDO::PARAM_STR);
+ 
             foreach ($params as $key => $value) {
 
                 $stmt->bindValue($key, $value);
-            }
 
+            }
+ 
             $stmt->bindValue(':length', $length, PDO::PARAM_INT);
 
             $stmt->bindValue(':start', $start, PDO::PARAM_INT);
 
             $stmt->execute();
-
+ 
             $data = [];
-
+ 
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
 
                 $refno = (string) ($row['refno'] ?? '');
@@ -2516,7 +2249,7 @@ class orderClass
                 $orderNumber = trim((string) ($row['order_number'] ?? ''));
 
                 $orderStatus = $this->resolveRecentOrderStatus($orderNumber, $this->userId);
-
+ 
                 $data[] = [
 
                     'ref_no'           => $refno,
@@ -2550,8 +2283,9 @@ class orderClass
                         . '\')"><i class="fa fa-eye"></i></button>',
 
                 ];
-            }
 
+            }
+ 
             return json_encode([
 
                 'draw'            => $draw,
@@ -2563,10 +2297,11 @@ class orderClass
                 'data'            => $data,
 
             ]);
+
         } catch (Exception $e) {
 
             error_log($e->getMessage());
-
+ 
             return json_encode([
 
                 'draw' => 0,
@@ -2580,9 +2315,11 @@ class orderClass
                 'error' => $e->getMessage() . $e->getLine(),
 
             ]);
-        }
-    }
 
+        }
+
+    }
+ 
     private function resolveRecentOrderStatus(string $orderNumber, string $cuno): string
 
     {
@@ -2590,12 +2327,13 @@ class orderClass
         $orderNumber = trim($orderNumber);
 
         $cuno = trim($cuno);
-
+ 
         if ($orderNumber === '' || $cuno === '') {
 
             return '<span class="status-badge border border-dark">Pending</span>';
-        }
 
+        }
+ 
         $despatchStmt = $this->dpconn->prepare("
 
             SELECT 1
@@ -2617,12 +2355,13 @@ class orderClass
         $despatchStmt->bindValue(':ordno', $orderNumber);
 
         $despatchStmt->execute();
-
+ 
         if ($despatchStmt->fetchColumn()) {
 
             return '<span class="status-badge border border-dark">Despatched</span>';
-        }
 
+        }
+ 
         $ackStmt = $this->dpconn->prepare("
 
             SELECT 1
@@ -2644,18 +2383,22 @@ class orderClass
         $ackStmt->bindValue(':ordno', $orderNumber);
 
         $ackStmt->execute();
-
+ 
         if ($ackStmt->fetchColumn()) {
 
             return '<span class="status-badge border border-dark">AO</span>';
+
         }
-
+ 
         return '<span class="status-badge border border-dark">Pending</span>';
-    }
 
+    }
+ 
     public function getRecentOrders_bk()
+
     {
 
+        $cuno ="CU1A03751";
 
         try {
 
@@ -2664,23 +2407,24 @@ class orderClass
             $start  = isset($_POST['start']) ? (int)$_POST['start'] : 0;
 
             $length = isset($_POST['length']) ? (int)$_POST['length'] : 10;
-
+ 
             $search = $_POST['search']['value'] ?? '';
-
+ 
             $where = '';
 
             $params = [];
-
+ 
             if (!empty($search)) {
 
                 $where = "AND (refno ILIKE :search OR tplcode ILIKE :search OR tpldesc ILIKE :search)";
 
                 $params[':search'] = "%{$search}%";
-            }
 
+            }
+ 
             $totalQry = $this->obconn->prepare("SELECT DISTINCT(select COUNT(*) FROM plexecom_customer_units WHERE cuno = :createdBy)");
 
-            $totalQry->bindParam(':createdBy', $this->customer_code, PDO::PARAM_STR);
+            $totalQry->bindParam(':createdBy', $this->userId, PDO::PARAM_STR);
 
             $totalQry->execute();
 
@@ -2690,38 +2434,40 @@ class orderClass
 
             $countStmt = $this->obconn->prepare($countSql);
 
-            $countStmt->bindParam(':createdBy', $this->customer_code, PDO::PARAM_STR);
+            $countStmt->bindParam(':createdBy', $this->userId, PDO::PARAM_STR);
 
             foreach ($params as $key => $value) {
 
                 $countStmt->bindValue($key, $value);
+
             }
 
             $countStmt->execute();
 
             $filteredRecords = $countStmt->fetchColumn();
-
+ 
             $sql = "SELECT distinct a.refno, a.order_number, a.indent_date, a.tplcode, a.tpldesc, a.qty, a.price, d.order_category,a.deladdr,c.delivery_term,e.pay_desc,f.trans_name as transporter FROM plexecom_customer_units as a LEFT JOIN tbl_vayu_delivery_term as c on a.delterms_code=c.delivery_code::varchar LEFT JOIN tbl_vayu_order_category as d on a.indent_category::varchar = d.id::varchar LEFT JOIN spp_payterm_master as e on a.paycode=e.pay_code::varchar LEFT JOIN transporter_master as f on a.transporter = f.trans_code  WHERE cuno = :createdBy {$where} ORDER BY refno DESC LIMIT :length OFFSET :start";
-
+ 
             $stmt = $this->obconn->prepare($sql);
-
-            $stmt->bindParam(':createdBy', $this->customer_code, PDO::PARAM_STR);
-
+ 
+            $stmt->bindParam(':createdBy', $this->userId, PDO::PARAM_STR);
+ 
             foreach ($params as $key => $value) {
 
                 $stmt->bindValue($key, $value);
-            }
 
+            }
+ 
             $stmt->bindValue(':length', $length, PDO::PARAM_INT);
 
             $stmt->bindValue(':start', $start, PDO::PARAM_INT);
-
+ 
             $stmt->execute();
-
+ 
             $data = [];
-
+ 
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-
+ 
                 $data[] = [
 
                     'order_no'         => $row['refno'],
@@ -2741,6 +2487,7 @@ class orderClass
                     'lines' => '<button style="background:transparent;border:none;" onclick="openLineItems(\'' . $row['refno'] . '\')"><i class="fa fa-eye"></i></button>'
 
                 ];
+
             }
 
             return json_encode([
@@ -2754,10 +2501,11 @@ class orderClass
                 'data'            => $data
 
             ]);
+
         } catch (Exception $e) {
-
+ 
             error_log($e->getMessage());
-
+ 
             return json_encode([
 
                 'draw' => 0,
@@ -2771,10 +2519,12 @@ class orderClass
                 'error' => $e->getMessage() . $e->getLine()
 
             ]);
+
         }
+
     }
 
-
+ 
     public function customer_master()
     {
         $search = trim($_POST['search'] ?? '');
@@ -2866,7 +2616,7 @@ class orderClass
         } catch (Exception $e) {
         }
     }
-    public function getRecentOrderLine()
+     public function getRecentOrderLine()
     {
         $orderNo = $_POST['orderNo'];
         $tableLine = "";
@@ -2925,7 +2675,7 @@ class orderClass
             $length = $_POST['length'] ?? 10;
             $search = $_POST['search']['value'] ?? '';
 
-            $cuno = $this->customer_code;
+            $cuno = "CU1A03751";
 
             $where = " WHERE a.cmp != 600 AND a.dpst NOT IN ('SLS500','SLS01','SO0600','SAL01') AND a.cuno = :cuno ";
 
@@ -3020,7 +2770,7 @@ class orderClass
 
             $search = $_POST['search']['value'] ?? '';
 
-            $cuno = $this->customer_code;
+            $cuno = "CU1A03751";
 
             $where = '';
 
