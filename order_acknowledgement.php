@@ -71,39 +71,17 @@ if (!$canListOrderAck) {
                                 <table id="orderTable" class="table table-hover align-middle w-100">
                                     <thead>
                                         <tr>
-                                            <th>Customer</th>
-                                            <th>DPST</th>
-                                            <th>PO Number</th>
-                                            <th>AO Number</th>
-                                            <th>AO Date</th>
-                                            <th>Items</th>
+                                            <th width="15%">Ref No</th>
+                                            <th width="12%">PO Number</th>
+                                            <th width="12%">AO Number</th>
+                                            <th width="12%">AO Date</th>
+                                            <th width="5%">Action</th>
                                         </tr>
                                     </thead>
                                 </table>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- MODAL -->
-    <div class="modal fade" id="lineModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-
-                    <h5 class="page-subtitle mb-0" id="lineModalLabel">
-                        Order Acknowledgement List
-                    </h5>
-
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary add-item-btn" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -132,51 +110,29 @@ if (!$canListOrderAck) {
             },
 
             columns: [{
-                    data: 'cuno'
+                    data: 'ref_no'
                 },
                 {
-                    data: 'dpst'
+                    data: 'po_number'
                 },
                 {
-                    data: 'purno'
-                },
-
-                {
-                    data: 'ordno'
+                    data: 'ao_number'
                 },
                 {
-                    data: 'ord_date'
+                    data: 'ao_date'
                 },
                 {
-                    data: 'lines'
+                    data: 'action',
+                    orderable: false,
+                    searchable: false
                 },
             ],
             drawCallback: function() {
                 if (!canViewOrderAck) {
-                    $('#orderTable tbody button[onclick*="openLineItems"]').remove();
+                    $('#orderTable tbody a[href*="order_data.php"]').remove();
                 }
             }
         });
 
     });
-
-    function openLineItems(orderNo) {
-        if (!canViewOrderAck) {
-            return;
-        }
-
-        $.ajax({
-            url: 'orderRequest.php',
-            type: 'POST',
-            data: {
-                orderNo: orderNo,
-                action: "getAcknowledgeLine"
-            },
-            dataType: "HTML",
-            success: function(res) {
-                $("#lineModal").modal('toggle');
-                $(".modal-body").html(res);
-            }
-        })
-    }
 </script>

@@ -1,5 +1,6 @@
 <?php
 session_start();
+// Check assigned permission start
 include('pdo_obconn.php');
 require_once __DIR__ . '/includes/admin_access_helpers.php';
 require_once __DIR__ . '/includes/rbac_access_helpers.php';
@@ -11,90 +12,34 @@ if (empty($_SESSION['usr_name'])) {
 
 admin_refresh_session_role($obconn);
 
-if (!rbac_user_can($obconn, 'despatch-details', 'list')) {
+$ddModule = 'despatch-details';
+$canListDespatchDetails = rbac_user_can($obconn, $ddModule, 'list');
+$canExportDespatchDetails = rbac_user_can($obconn, $ddModule, 'export-excel');
+$canViewDespatchDetails = rbac_user_can($obconn, $ddModule, 'view');
+
+if (!$canListDespatchDetails) {
     header('Location: access_denied.php');
     exit;
 }
+//end
 ?>
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
     <title>Dealer - Despatch Details</title>
+
     <?php include('header_css.php'); ?>
+
+    <link href="css/order_acknowledge_style.css" rel="stylesheet" />
     <link href="css/orderbook_style.css" rel="stylesheet" />
-    <link href="css/select2_change.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
-
     <style>
-        body {
-            background: #f5f7fa;
-            font-size: 14px;
-        }
 
-        .main-card {
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, .12);
-            overflow: hidden;
-            margin-top: 20px;
-            width: max-content;
-        }
-
-        .page-header {
-            background: linear-gradient(135deg, #000, #000);
-            color: #fff;
-            padding: 14px;
-            text-align: center;
-            font-size: 14px;
-            font-weight: 700;
-            letter-spacing: .5px;
-        }
-
-        .info-table td {
-            padding: 10px;
-            vertical-align: top;
-        }
-
-        .info-table td:first-child {
-            width: 220px;
-            font-weight: 600;
-            background: #f8f9fa;
-        }
-
-        .section-title {
-            background: #000;
-            color: #fff;
-            padding: 10px 15px;
-            font-weight: 600;
-        }
-
-        .table-items thead th {
-            background: #000;
-            color: #fff;
-            text-align: center;
-            vertical-align: middle;
-            font-size: 13px;
-        }
-
-        .table-items tbody td {
-            vertical-align: middle;
-            font-size: 13px;
-        }
-
-        .address {
-            line-height: 1.6;
-        }
-
-        .text-right {
-            text-align: right;
-        }
-
-        .text-center {
-            text-align: center;
-        }
     </style>
 </head>
 
@@ -104,30 +49,42 @@ if (!rbac_user_can($obconn, 'despatch-details', 'list')) {
 
         <!-- SIDEBAR -->
         <?php include('sidebar.php'); ?>
-
         <!-- CONTENT -->
         <div class="content">
-            <div class="order-form-card" id="orderFormCard">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card shadow-sm" style="border:1px solid #dbe2ea !important;">
+                        <div class="card-body">
+                            <div class="page-header mb-3">
+                                <div class="header-flex">
+                                    <button id="btnExcel"
+                                        class="add-item-btn btn-sm<?php echo $canExportDespatchDetails ? '' : ' d-none'; ?>"
+                                        onclick="window.location.href='exportOrders.php'">
+                                        <i class="fa fa-file-excel"></i>
+                                        Export Excel
+                                    </button>
 
-                <div class="table-responsive">
-                    <table class="table table-bordered table-hover table-items mb-0" id="despatchTable">
-                        <thead>
-                            <tr>
-                                <th>Customer</th>
-                                <th>Product Group</th>
-                                <th>AO Number</th>
-                                <th>Invoice No</th>
-                                <th>Invoice Date</th>
-                                <th>Transporter</th>
-                                <th>LRNO/DT</th>
-                                <th>Packing Details</th>
-                                <th>Weight</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-
-                        </tbody>
-                    </table>
+                                </div>
+                            </div>
+                            <!-- TABLE -->
+                            <div class="table-responsive">
+                                <table id="orderTable" class="table table-hover align-middle w-100">
+                                    <thead>
+                                        <tr>
+                                            <th width="10%">AO Number</th>
+                                            <th width="12%">Order Ref Number</th>
+                                            <th width="10%">Invoice Date</th>
+                                            <th width="12%">Transporter</th>
+                                            <th width="10%">LR No</th>
+                                            <th width="18%">Packaging Details</th>
+                                            <th width="8%">Weight</th>
+                                            <th width="5%">Action</th>
+                                        </tr>
+                                    </thead>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -137,9 +94,11 @@ if (!rbac_user_can($obconn, 'despatch-details', 'list')) {
 </html>
 <?php include('script_js.php'); ?>
 <script>
+    const canViewDespatchDetails = <?php echo $canViewDespatchDetails ? 'true' : 'false'; ?>;
+
     $(document).ready(function() {
 
-        $('#despatchTable').DataTable({
+        $('#orderTable').DataTable({
             processing: true,
             serverSide: true,
             scrollX: true,
@@ -154,33 +113,37 @@ if (!rbac_user_can($obconn, 'despatch-details', 'list')) {
             },
 
             columns: [{
-                    data: 'cuno'
+                    data: 'ao_number'
                 },
                 {
-                    data: 'dpst'
+                    data: 'order_ref_number'
                 },
                 {
-                    data: 'ordno'
-                },
-                {
-                    data: 'invno'
-                },
-                {
-                    data: 'invdt'
+                    data: 'invoice_date'
                 },
                 {
                     data: 'transporter'
                 },
                 {
-                    data: 'lrno'
+                    data: 'lr_no'
                 },
                 {
-                    data: 'packing'
+                    data: 'packaging_details'
                 },
                 {
                     data: 'weight'
                 },
-            ]
+                {
+                    data: 'action',
+                    orderable: false,
+                    searchable: false
+                },
+            ],
+            drawCallback: function() {
+                if (!canViewDespatchDetails) {
+                    $('#orderTable tbody a[href*="order_data.php"]').remove();
+                }
+            }
         });
 
     });

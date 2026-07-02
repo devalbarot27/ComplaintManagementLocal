@@ -2304,6 +2304,104 @@ class orderClass
             $params = [];
 
             if (!empty($search)) {
+                $where = "AND (
+                    m.ordno ILIKE :search
+                    OR COALESCE(m.purno, '') ILIKE :search
+                )";
+                $params[':search'] = "%{$search}%";
+            }
+
+
+            $totalQry = $this->dpconn->prepare("SELECT COUNT(*) FROM ( SELECT DISTINCT m.cuno,m.ordno,m.ord_date,m.purno,m.dpst,d.dpst_desc FROM maintdealer m  LEFT OUTER JOIN dpst_master d ON trim(m.dpst)=d.dpst_code::text WHERE  company!=600 AND cuno = :uname) x ");
+            $totalQry->bindParam(':uname', $this->customer_code, PDO::PARAM_STR);
+            $totalQry->execute();
+            $totalRecords = $totalQry->fetchColumn();
+
+            $countStmt = $this->dpconn->prepare("SELECT COUNT(*) FROM (SELECT DISTINCT m.cuno,m.ordno,m.ord_date,m.purno,m.dpst,d.dpst_desc FROM maintdealer m  LEFT OUTER JOIN dpst_master d ON trim(m.dpst)=d.dpst_code::text WHERE  company!=600 AND cuno = :uname {$where}) x");
+            $countStmt->bindParam(':uname', $this->customer_code, PDO::PARAM_STR);
+            foreach ($params as $key => $value) {
+                $countStmt->bindValue($key, $value);
+            }
+            $countStmt->execute();
+            $filteredRecords = $countStmt->fetchColumn();
+
+            $sql = "SELECT DISTINCT m.cuno,m.ordno,m.ord_date,m.purno,m.dpst,d.dpst_desc FROM maintdealer m  LEFT OUTER JOIN dpst_master d ON trim(m.dpst)=d.dpst_code::text WHERE  company!=600 AND cuno = :uname {$where} ORDER BY m.ord_date DESC LIMIT :length OFFSET :start";
+
+            $stmt = $this->dpconn->prepare($sql);
+
+            $stmt->bindParam(':uname', $this->customer_code, PDO::PARAM_STR);
+
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+
+            $stmt->bindValue(':length', $length, PDO::PARAM_INT);
+            $stmt->bindValue(':start', $start, PDO::PARAM_INT);
+
+            $stmt->execute();
+
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $refMap = $this->fetchPendingOrderRefMap(array_column($rows, 'ordno'));
+
+            $data = [];
+
+            foreach ($rows as $row) {
+                $ordno = trim((string) ($row['ordno'] ?? ''));
+                $cuno = trim((string) ($row['cuno'] ?? ''));
+                $refNo = $refMap[$ordno] ?? '';
+
+                if ($refNo === '') {
+                    $refNo = '-';
+                }
+
+                $refNoHtml = htmlspecialchars($refNo, ENT_QUOTES, 'UTF-8');
+                $actionCell = $ordno !== ''
+                    ? '<a href="order_data.php?order=' . urlencode($ordno)
+                        . '&cuno=' . urlencode($cuno)
+                        . '&reference=order_acknowledgement" target="_blank" class="btn btn-sm btn-outline-dark" title="View">'
+                        . '<i class="fa fa-eye"></i></a>'
+                    : '';
+
+                $data[] = [
+                    'ref_no'    => $refNoHtml,
+                    'po_number' => trim((string) ($row['purno'] ?? '')) !== '' ? trim((string) $row['purno']) : '-',
+                    'ao_number' => $ordno !== '' ? $ordno : '-',
+                    'ao_date'   => !empty($row['ord_date']) ? date('d-m-Y', strtotime($row['ord_date'])) : '-',
+                    'action'    => $actionCell,
+                ];
+            }
+            return json_encode([
+                'draw'            => $draw,
+                'recordsTotal'    => (int)$totalRecords,
+                'recordsFiltered' => (int)$filteredRecords,
+                'data'            => $data
+            ]);
+        } catch (Exception $e) {
+            error_log($e->getMessage());
+            return json_encode([
+                'draw' => 0,
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => $e->getMessage() . $e->getLine()
+            ]);
+        }
+    }
+
+    public function getOrderAcknowledgeList_bk()
+    {
+        try {
+
+            $draw   = isset($_POST['draw']) ? (int)$_POST['draw'] : 0;
+            $start  = isset($_POST['start']) ? (int)$_POST['start'] : 0;
+            $length = isset($_POST['length']) ? (int)$_POST['length'] : 10;
+
+            $search = $_POST['search']['value'] ?? '';
+
+            $where = '';
+            $params = [];
+
+            if (!empty($search)) {
                 $where = "AND (ordno ILIKE :search)";
                 $params[':search'] = "%{$search}%";
             }
@@ -2917,6 +3015,123 @@ class orderClass
     }
 
     public function getDespatchDetails()
+    {
+        try {
+
+            $draw   = $_POST['draw'] ?? 0;
+            $start  = $_POST['start'] ?? 0;
+            $length = $_POST['length'] ?? 10;
+            $search = $_POST['search']['value'] ?? '';
+
+            $cuno = $this->customer_code;
+
+            $where = " WHERE a.cmp != 600 AND a.dpst NOT IN ('SLS500','SLS01','SO0600','SAL01') AND a.cuno = :cuno ";
+
+            $params = [
+                ':cuno' => $cuno
+            ];
+
+            if (!empty($search)) {
+                $where .= " AND (CAST(a.invno AS TEXT) ILIKE :search
+    OR CAST(a.ordno AS TEXT) ILIKE :search
+    OR a.cuname ILIKE :search
+    OR a.dpst ILIKE :search
+    OR d.dpst_desc ILIKE :search)";
+                $params[':search'] = "%{$search}%";
+            }
+
+            $totalSql = "SELECT COUNT(*) FROM (SELECT DISTINCT ON(a.invdate,a.cmp,a.ordno,a.invref,a.invno) a.invno FROM despatch a LEFT JOIN lr_details b ON a.invref = b.invref AND a.invno = b.invno AND a.cmp = b.company LEFT JOIN dpst_master d ON d.dpst_code::text = a.dpst WHERE a.cmp != 600 AND a.dpst NOT IN ('SLS500','SLS01','SO0600','SAL01') AND a.cuno = :cuno) x";
+
+            $totalStmt = $this->dpconn->prepare($totalSql);
+            $totalStmt->bindValue(':cuno', $cuno);
+            $totalStmt->execute();
+            $totalRecords = (int)$totalStmt->fetchColumn();
+
+
+            $countSql = "SELECT COUNT(*) FROM ( SELECT DISTINCT ON(a.invdate,a.cmp,a.ordno,a.invref,a.invno) a.invno FROM despatch a LEFT JOIN lr_details b ON a.invref = b.invref AND a.invno = b.invno AND a.cmp = b.company LEFT JOIN dpst_master d ON d.dpst_code::text = a.dpst {$where}) x";
+            $countStmt = $this->dpconn->prepare($countSql);
+            foreach ($params as $key => $value) {
+                $countStmt->bindValue($key, $value);
+            }
+            $countStmt->execute();
+            $filteredRecords = (int)$countStmt->fetchColumn();
+            $sql = "SELECT DISTINCT ON(a.invdate,a.cmp,a.ordno,a.invref,a.invno)a.invno,a.invdate,a.comm_dt,a.invref,a.dpst,d.dpst_desc,a.ordno,a.ord_date,a.posno,a.cmp,b.tname,b.lrno,b.lrdate,b.cases,b.bundles,b.boxes,b.carton_box,b.spl_cases,b.weight,b.w_unit,b.dly_code,a.cuno,a.cuname FROM despatch a LEFT JOIN lr_details b ON a.invref = b.invref AND a.invno = b.invno AND a.cmp = b.company LEFT JOIN dpst_master d
+            ON d.dpst_code::text = a.dpst {$where} ORDER BY a.invdate DESC, a.ordno,
+            a.invref, a.invno LIMIT :length OFFSET :start";
+            $stmt = $this->dpconn->prepare($sql);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+            $stmt->bindValue(':length', (int)$length, PDO::PARAM_INT);
+            $stmt->bindValue(':start', (int)$start, PDO::PARAM_INT);
+            $stmt->execute();
+
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $refMap = $this->fetchPendingOrderRefMap(array_column($rows, 'ordno'));
+            $data = [];
+
+            foreach ($rows as $row) {
+                $ordno = trim((string) ($row['ordno'] ?? ''));
+                $cuno = trim((string) ($row['cuno'] ?? ''));
+                $orderRef = $refMap[$ordno] ?? trim((string) ($row['invref'] ?? ''));
+
+                if ($orderRef === '') {
+                    $orderRef = '-';
+                }
+
+                $lrNo = trim((string) ($row['lrno'] ?? ''));
+                $lrDate = !empty($row['lrdate']) ? date('d-m-Y', strtotime($row['lrdate'])) : '';
+                $lrCell = $lrNo !== '' ? ($lrDate !== '' ? $lrNo . ' / ' . $lrDate : $lrNo) : '-';
+
+                $weight = trim((string) ($row['weight'] ?? ''));
+                $wUnit = trim((string) ($row['w_unit'] ?? ''));
+                $weightCell = $weight !== '' ? $weight . ($wUnit !== '' ? ' ' . $wUnit : '') : '-';
+
+                $packingCell = 'Cases:' . ($row['cases'] ?? '')
+                    . ' Boxes:' . ($row['boxes'] ?? '')
+                    . ' Bundles:' . ($row['bundles'] ?? '')
+                    . ' Cartoons:' . ($row['carton_box'] ?? '')
+                    . ' Special Cases:' . ($row['spl_cases'] ?? '');
+
+                $actionCell = $ordno !== ''
+                    ? '<a href="order_data.php?order=' . urlencode($ordno)
+                        . '&cuno=' . urlencode($cuno)
+                        . '&reference=despatch_details" target="_blank" class="btn btn-sm btn-outline-dark" title="View">'
+                        . '<i class="fa fa-eye"></i></a>'
+                    : '';
+
+                $data[] = [
+                    'ao_number'          => $ordno !== '' ? $ordno : '-',
+                    'order_ref_number'   => $orderRef,
+                    'invoice_date'       => !empty($row['invdate']) ? date('d-m-Y', strtotime($row['invdate'])) : '-',
+                    'transporter'        => trim((string) ($row['tname'] ?? '')) !== '' ? trim((string) $row['tname']) : '-',
+                    'lr_no'              => $lrCell,
+                    'packaging_details'  => $packingCell,
+                    'weight'             => $weightCell,
+                    'action'             => $actionCell,
+                ];
+            }
+
+            echo json_encode([
+                'draw'            => (int)$draw,
+                'recordsTotal'    => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data'            => $data
+            ]);
+        } catch (Exception $e) {
+
+            echo json_encode([
+                'draw' => 0,
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+
+    public function getDespatchDetails_bk()
     {
         try {
 
