@@ -1,5 +1,6 @@
 <?php
 session_start();
+// Check assigned permission start
 include('pdo_obconn.php');
 require_once __DIR__ . '/includes/admin_access_helpers.php';
 require_once __DIR__ . '/includes/rbac_access_helpers.php';
@@ -11,17 +12,16 @@ if (empty($_SESSION['usr_name'])) {
 
 admin_refresh_session_role($obconn);
 
-$roModule = 'recent-orders';
-$canListRecentOrders = rbac_user_can($obconn, $roModule, 'list');
-$canExportRecentOrders = rbac_user_can($obconn, $roModule, 'export-excel');
-$canViewRecentOrders = rbac_user_can($obconn, $roModule, 'view');
+$oaModule = 'order-acknowledgement';
+$canListOrderAck = rbac_user_can($obconn, $oaModule, 'list');
+$canExportOrderAck = rbac_user_can($obconn, $oaModule, 'export-excel');
+$canViewOrderAck = rbac_user_can($obconn, $oaModule, 'view');
 
-if (!$canListRecentOrders) {
+if (!$canListOrderAck) {
     header('Location: access_denied.php');
     exit;
 }
-
-$refNo = trim((string) ($_GET['order_no'] ?? ''));
+//end
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -32,7 +32,7 @@ $refNo = trim((string) ($_GET['order_no'] ?? ''));
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0">
 
-    <title>Dealer - Recent Orders</title>
+    <title>Dealer - Order Acknowledgement</title>
 
     <?php include('header_css.php'); ?>
 
@@ -58,7 +58,7 @@ $refNo = trim((string) ($_GET['order_no'] ?? ''));
                             <div class="page-header mb-3">
                                 <div class="header-flex">
                                     <button id="btnExcel"
-                                        class="add-item-btn btn-sm<?php echo $canExportRecentOrders ? '' : ' d-none'; ?>"
+                                        class="add-item-btn btn-sm<?php echo $canExportOrderAck ? '' : ' d-none'; ?>"
                                         onclick="window.location.href='exportOrders.php'">
                                         <i class="fa fa-file-excel"></i>
                                         Export Excel
@@ -71,14 +71,12 @@ $refNo = trim((string) ($_GET['order_no'] ?? ''));
                                 <table id="orderTable" class="table table-hover align-middle w-100">
                                     <thead>
                                         <tr>
-                                            <th width="15%">Ref No</th>
-                                            <th width="12%">Category</th>
-                                            <th>Delivery Term</th>
-                                            <th width="12%">PO Number</th>
-                                            <th width="12%">Payment Term</th>
-                                            <th width="15%">Transporter</th>
-                                            <th width="10%">Order Status</th>
-                                            <th width="5%">Action</th>
+                                            <th>Customer</th>
+                                            <th>DPST</th>
+                                            <th>PO Number</th>
+                                            <th>AO Number</th>
+                                            <th>AO Date</th>
+                                            <th>Items</th>
                                         </tr>
                                     </thead>
                                 </table>
@@ -96,7 +94,7 @@ $refNo = trim((string) ($_GET['order_no'] ?? ''));
                 <div class="modal-header">
 
                     <h5 class="page-subtitle mb-0" id="lineModalLabel">
-                        Recent Order List
+                        Order Acknowledgement List
                     </h5>
 
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -115,12 +113,11 @@ $refNo = trim((string) ($_GET['order_no'] ?? ''));
 </html>
 <?php include('script_js.php'); ?>
 <script>
-    const canViewRecentOrders = <?php echo $canViewRecentOrders ? 'true' : 'false'; ?>;
-    const recentOrderRefNo = <?php echo json_encode($refNo, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+    const canViewOrderAck = <?php echo $canViewOrderAck ? 'true' : 'false'; ?>;
 
     $(document).ready(function() {
 
-        var table = $('#orderTable').DataTable({
+        $('#orderTable').DataTable({
             processing: true,
             serverSide: true,
             scrollX: true,
@@ -130,50 +127,41 @@ $refNo = trim((string) ($_GET['order_no'] ?? ''));
                 url: 'orderRequest.php',
                 type: 'POST',
                 data: {
-                    action: 'getRecentOrders'
+                    action: 'getOrderAcknowledgeList'
                 }
             },
 
             columns: [{
-                    data: 'ref_no'
+                    data: 'cuno'
                 },
                 {
-                    data: 'category'
+                    data: 'dpst'
                 },
                 {
-                    data: 'delivery_term'
+                    data: 'purno'
+                },
+
+                {
+                    data: 'ordno'
                 },
                 {
-                    data: 'po_number'
+                    data: 'ord_date'
                 },
                 {
-                    data: 'payment_term'
-                },
-                {
-                    data: 'transporter'
-                },               
-                {
-                    data: 'order_status'
-                },
-                {
-                    data: 'lines',
-                    orderable: false
+                    data: 'lines'
                 },
             ],
             drawCallback: function() {
-                if (!canViewRecentOrders) {
+                if (!canViewOrderAck) {
                     $('#orderTable tbody button[onclick*="openLineItems"]').remove();
                 }
             }
         });
 
-        if (recentOrderRefNo !== '') {
-            table.search(recentOrderRefNo).draw();
-        }
     });
 
     function openLineItems(orderNo) {
-        if (!canViewRecentOrders) {
+        if (!canViewOrderAck) {
             return;
         }
 
@@ -182,7 +170,7 @@ $refNo = trim((string) ($_GET['order_no'] ?? ''));
             type: 'POST',
             data: {
                 orderNo: orderNo,
-                action: "getRecentOrderLine"
+                action: "getAcknowledgeLine"
             },
             dataType: "HTML",
             success: function(res) {

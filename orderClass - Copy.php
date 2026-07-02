@@ -1869,50 +1869,6 @@ class orderClass
         return $orderNo;
     }
 
-    private function fetchPendingOrderRefMap(array $orderNumbers): array
-    {
-        $orderNumbers = array_values(array_filter(array_unique(array_map('trim', $orderNumbers))));
-
-        if ($orderNumbers === []) {
-            return [];
-        }
-
-        $placeholders = [];
-        $params = [':cuno' => $this->userId];
-
-        foreach ($orderNumbers as $index => $orderNumber) {
-            $paramKey = ':ordno' . $index;
-            $placeholders[] = $paramKey;
-            $params[$paramKey] = $orderNumber;
-        }
-
-        $sql = "
-            SELECT DISTINCT ON (TRIM(a.order_number))
-                TRIM(a.order_number) AS order_number,
-                TRIM(a.refno) AS refno
-            FROM plexecom_customer_units a
-            WHERE a.cuno = :cuno
-              AND TRIM(a.order_number) IN (" . implode(', ', $placeholders) . ")
-            ORDER BY TRIM(a.order_number), a.indent_date DESC
-        ";
-
-        $stmt = $this->obconn->prepare($sql);
-
-        foreach ($params as $key => $value) {
-            $stmt->bindValue($key, $value);
-        }
-
-        $stmt->execute();
-
-        $refMap = [];
-
-        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $refMap[trim((string) $row['order_number'])] = trim((string) $row['refno']);
-        }
-
-        return $refMap;
-    }
-
     public function getPendingOrderList()
     {
         try {
@@ -1927,11 +1883,7 @@ class orderClass
             $params = [];
 
             if (!empty($search)) {
-                $where = "AND (
-                    p.ordno ILIKE :search
-                    OR COALESCE(p.pono, '') ILIKE :search
-                    OR COALESCE(p.indentno, '') ILIKE :search
-                )";
+                $where = "AND (ordno ILIKE :search)";
                 $params[':search'] = "%{$search}%";
             }
 
@@ -1949,7 +1901,7 @@ class orderClass
             $countStmt->execute();
             $filteredRecords = $countStmt->fetchColumn();
 
-            $sql = "SELECT p.cuno,p.cuname,p.ordno,p.orddt,p.itemcode,p.itemdesc,p.qty,p.unitvalue,p.currency,p.pono,p.dpst,dm.dpst_desc,p.delydt,p.otcode,p.indentno,tc.comm_dt FROM pendingordersnew p LEFT OUTER JOIN dpst_master dm ON trim(p.dpst)=dm.dpst_code::text LEFT JOIN tbl_commitment tc ON p.ordno=tc.orderno AND p.posno=tc.posno WHERE p.company!=600 AND p.cuno=:uname {$where} ORDER BY p.orddt DESC LIMIT :length OFFSET :start";
+            $sql = "SELECT cuno,cuname,ordno,orddt,itemcode,itemdesc,qty,unitvalue,currency,pono,dpst,dpst_desc,delydt,otcode,tbl_commitment.comm_dt FROM pendingordersnew LEFT OUTER JOIN dpst_master ON trim(dpst)=dpst_code::text LEFT JOIN tbl_commitment ON pendingordersnew.ordno=tbl_commitment.orderno AND pendingordersnew.posno=tbl_commitment.posno WHERE company!=600 AND cuno=:uname {$where} ORDER BY orddt DESC LIMIT :length OFFSET :start";
 
             $stmt = $this->dpconn->prepare($sql);
 
@@ -1964,40 +1916,18 @@ class orderClass
 
             $stmt->execute();
 
-            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            $refMap = $this->fetchPendingOrderRefMap(array_column($rows, 'ordno'));
-            $statusCache = [];
-
             $data = [];
 
-            foreach ($rows as $row) {
-                $ordno = trim((string) ($row['ordno'] ?? ''));
-                $cuno = trim((string) ($row['cuno'] ?? ''));
-                $refNo = $refMap[$ordno] ?? trim((string) ($row['indentno'] ?? ''));
-
-                if ($refNo === '') {
-                    $refNo = '-';
-                }
-
-                if (!isset($statusCache[$ordno])) {
-                    $statusCache[$ordno] = $this->resolveRecentOrderStatus($ordno, $cuno);
-                }
-
-                $refNoHtml = htmlspecialchars($refNo, ENT_QUOTES, 'UTF-8');
-                $actionCell = $ordno !== ''
-                    ? '<a href="order_data.php?order=' . urlencode($ordno)
-                        . '&cuno=' . urlencode($cuno)
-                        . '&reference=pending_order" target="_blank" class="btn btn-sm btn-outline-dark" title="View">'
-                        . '<i class="fa fa-eye"></i></a>'
-                    : '';
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
 
                 $data[] = [
-                    'ref_no'        => $refNoHtml,
-                    'po_number'     => trim((string) ($row['pono'] ?? '')) !== '' ? trim((string) $row['pono']) : '-',
-                    'ao_number'     => $ordno !== '' ? $ordno : '-',
-                    'delivery_date' => !empty($row['delydt']) ? date('d-m-Y', strtotime($row['delydt'])) : '-',
-                    'order_status'  => $statusCache[$ordno],
-                    'action'        => $actionCell,
+                    'cuno'            => $row['cuno'],
+                    'pono'            => $row['pono'],
+                    'aono'             => $row['ordno'],
+                    'aodate'             => $row['orddt'],
+                    'delydt'         => date('d-m-Y', strtotime($row['delydt'])),
+                    'lines' => '<a href="order_data.php?order=' . urlencode($row['ordno']) .
+                        '&cuno=' . urlencode($row['cuno']) . '&reference=pending_order" target="_blank" style="text-decoration:none;">View</a>'
                 ];
             }
             return json_encode([

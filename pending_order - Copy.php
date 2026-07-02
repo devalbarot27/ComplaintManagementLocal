@@ -1,5 +1,6 @@
 <?php
 session_start();
+// Check assigned permission start
 include('pdo_obconn.php');
 require_once __DIR__ . '/includes/admin_access_helpers.php';
 require_once __DIR__ . '/includes/rbac_access_helpers.php';
@@ -11,59 +12,48 @@ if (empty($_SESSION['usr_name'])) {
 
 admin_refresh_session_role($obconn);
 
-$roModule = 'recent-orders';
-$canListRecentOrders = rbac_user_can($obconn, $roModule, 'list');
-$canExportRecentOrders = rbac_user_can($obconn, $roModule, 'export-excel');
-$canViewRecentOrders = rbac_user_can($obconn, $roModule, 'view');
+$poModule = 'pending-order';
+$canListPendingOrder = rbac_user_can($obconn, $poModule, 'list');
+$canExportPendingOrder = rbac_user_can($obconn, $poModule, 'export-excel');
+$canViewPendingOrder = rbac_user_can($obconn, $poModule, 'view');
 
-if (!$canListRecentOrders) {
+if (!$canListPendingOrder) {
     header('Location: access_denied.php');
     exit;
 }
-
-$refNo = trim((string) ($_GET['order_no'] ?? ''));
+//end
 ?>
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0">
-
-    <title>Dealer - Recent Orders</title>
-
+    <title>Dealer - Pending Orders</title>
     <?php include('header_css.php'); ?>
-
     <link href="css/order_acknowledge_style.css" rel="stylesheet" />
     <link href="css/orderbook_style.css" rel="stylesheet" />
-    <style>
-
-    </style>
 </head>
 
 <body>
-
     <div class="main-wrapper" id="mainWrapper">
-
         <!-- SIDEBAR -->
         <?php include('sidebar.php'); ?>
         <!-- CONTENT -->
         <div class="content">
             <div class="row">
                 <div class="col-md-12">
-                    <div class="card shadow-sm" style="border:1px solid #dbe2ea !important;">
+                    <div class="card shadow-sm">
                         <div class="card-body">
                             <div class="page-header mb-3">
                                 <div class="header-flex">
                                     <button id="btnExcel"
-                                        class="add-item-btn btn-sm<?php echo $canExportRecentOrders ? '' : ' d-none'; ?>"
+                                        class="add-item-btn btn-sm<?php echo $canExportPendingOrder ? '' : ' d-none'; ?>"
                                         onclick="window.location.href='exportOrders.php'">
                                         <i class="fa fa-file-excel"></i>
                                         Export Excel
                                     </button>
-
                                 </div>
                             </div>
                             <!-- TABLE -->
@@ -71,14 +61,12 @@ $refNo = trim((string) ($_GET['order_no'] ?? ''));
                                 <table id="orderTable" class="table table-hover align-middle w-100">
                                     <thead>
                                         <tr>
-                                            <th width="15%">Ref No</th>
-                                            <th width="12%">Category</th>
-                                            <th>Delivery Term</th>
-                                            <th width="12%">PO Number</th>
-                                            <th width="12%">Payment Term</th>
-                                            <th width="15%">Transporter</th>
-                                            <th width="10%">Order Status</th>
-                                            <th width="5%">Action</th>
+                                            <th>Customer</th>
+                                            <th>Customer PO</th>
+                                            <th>AO No</th>
+                                            <th>AO Date</th>
+                                            <th>Delivery Date</th>
+                                            <th>Items</th>
                                         </tr>
                                     </thead>
                                 </table>
@@ -94,16 +82,10 @@ $refNo = trim((string) ($_GET['order_no'] ?? ''));
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-
-                    <h5 class="page-subtitle mb-0" id="lineModalLabel">
-                        Recent Order List
-                    </h5>
-
+                    <h1 class="modal-title fs-5" id="lineModalLabel">Order Lines</h1>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-
-                </div>
+                <div class="modal-body"></div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary add-item-btn" data-bs-dismiss="modal">Close</button>
                 </div>
@@ -115,12 +97,11 @@ $refNo = trim((string) ($_GET['order_no'] ?? ''));
 </html>
 <?php include('script_js.php'); ?>
 <script>
-    const canViewRecentOrders = <?php echo $canViewRecentOrders ? 'true' : 'false'; ?>;
-    const recentOrderRefNo = <?php echo json_encode($refNo, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+    const canViewPendingOrder = <?php echo $canViewPendingOrder ? 'true' : 'false'; ?>;
 
     $(document).ready(function() {
 
-        var table = $('#orderTable').DataTable({
+        $('#orderTable').DataTable({
             processing: true,
             serverSide: true,
             scrollX: true,
@@ -130,50 +111,40 @@ $refNo = trim((string) ($_GET['order_no'] ?? ''));
                 url: 'orderRequest.php',
                 type: 'POST',
                 data: {
-                    action: 'getRecentOrders'
+                    action: 'getPendingOrderList'
                 }
             },
 
             columns: [{
-                    data: 'ref_no'
+                    data: 'cuno'
                 },
                 {
-                    data: 'category'
+                    data: 'pono'
                 },
                 {
-                    data: 'delivery_term'
+                    data: 'aono'
                 },
                 {
-                    data: 'po_number'
+                    data: 'aodate'
                 },
                 {
-                    data: 'payment_term'
+                    data: 'delydt'
                 },
                 {
-                    data: 'transporter'
-                },               
-                {
-                    data: 'order_status'
-                },
-                {
-                    data: 'lines',
-                    orderable: false
+                    data: 'lines'
                 },
             ],
             drawCallback: function() {
-                if (!canViewRecentOrders) {
+                if (!canViewPendingOrder) {
                     $('#orderTable tbody button[onclick*="openLineItems"]').remove();
                 }
             }
         });
 
-        if (recentOrderRefNo !== '') {
-            table.search(recentOrderRefNo).draw();
-        }
     });
 
     function openLineItems(orderNo) {
-        if (!canViewRecentOrders) {
+        if (!canViewPendingOrder) {
             return;
         }
 
@@ -182,7 +153,7 @@ $refNo = trim((string) ($_GET['order_no'] ?? ''));
             type: 'POST',
             data: {
                 orderNo: orderNo,
-                action: "getRecentOrderLine"
+                action: "getAcknowledgeLine"
             },
             dataType: "HTML",
             success: function(res) {
